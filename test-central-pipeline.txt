@@ -1,0 +1,12 @@
+Testing central pipeline after permissions fix for Repository Dispatch
+
+This test file validates that:
+- Repository Dispatch triggers correctly for docs changes
+- Central pipeline processes docs-changed events  
+- Commit status updates to success (if deployment impact detected)
+- PR becomes mergeable
+
+Timestamp: 2025-09-18T20:27:30Z
+Fix applied: DISPATCH_TOKEN permissions for cross-repo status updates
+
+Note: Docs trigger only activates for deployment-impacting changes
