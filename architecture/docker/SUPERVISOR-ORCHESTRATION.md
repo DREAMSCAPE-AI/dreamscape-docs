@@ -224,14 +224,14 @@ core-pod:
 ### Testing Commands
 ```bash
 # Build and test Core Pod
-./dreamscape-infrastructure/scripts/test-core-pod.sh all
+./dreamscape-infra/scripts/test-core-pod.sh all
 
 # Test specific functionality
-./dreamscape-infrastructure/scripts/test-core-pod.sh test-restart
-./dreamscape-infrastructure/scripts/test-core-pod.sh acceptance
+./dreamscape-infra/scripts/test-core-pod.sh test-restart
+./dreamscape-infra/scripts/test-core-pod.sh acceptance
 
 # Monitor status
-./dreamscape-infrastructure/scripts/test-core-pod.sh status
+./dreamscape-infra/scripts/test-core-pod.sh status
 ```
 
 ## Acceptance Criteria Validation

@@ -139,9 +139,9 @@ ENV NODE_ENV=production \
 
 ### Configuration et Orchestration
 - ✅ `docker-compose.core-services.yml` - Orchestration complète
-- ✅ `dreamscape-infrastructure/scripts/mongo-init.js` - Initialisation base de données
-- ✅ `dreamscape-infrastructure/scripts/test-builds.sh` - Tests de build automatisés
-- ✅ `dreamscape-infrastructure/scripts/deploy-services.sh` - Script de déploiement complet
+- ✅ `dreamscape-infra/scripts/mongo-init.js` - Initialisation base de données
+- ✅ `dreamscape-infra/scripts/test-builds.sh` - Tests de build automatisés
+- ✅ `dreamscape-infra/scripts/deploy-services.sh` - Script de déploiement complet
 
 ### Documentation
 - ✅ `docs/DOCKER-MULTI-STAGE.md` - Guide complet d'implémentation
@@ -166,13 +166,13 @@ docker-compose -f docker-compose.core-services.yml build
 ### Tests et Déploiement
 ```bash
 # Tests de build automatisés
-./dreamscape-infrastructure/scripts/test-builds.sh
+./dreamscape-infra/scripts/test-builds.sh
 
 # Déploiement complet
-./dreamscape-infrastructure/scripts/deploy-services.sh deploy
+./dreamscape-infra/scripts/deploy-services.sh deploy
 
 # Monitoring
-./dreamscape-infrastructure/scripts/deploy-services.sh status
+./dreamscape-infra/scripts/deploy-services.sh status
 ```
 
 ### Vérification de la Sécurité

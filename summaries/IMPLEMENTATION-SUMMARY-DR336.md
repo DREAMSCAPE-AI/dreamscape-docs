@@ -163,7 +163,7 @@ services = {
 - ✅ Integration MongoDB, Redis et monitoring
 
 ### Tests et Validation
-- ✅ `dreamscape-infrastructure/scripts/test-core-pod.sh` - Suite de tests complète
+- ✅ `dreamscape-infra/scripts/test-core-pod.sh` - Suite de tests complète
 - ✅ Tests des 6 critères d'acceptation
 - ✅ Tests de restart, health checks, zombies
 - ✅ Tests de performance et monitoring
@@ -181,16 +181,16 @@ services = {
 ### Build et Test du Core Pod
 ```bash
 # Test complet avec tous les critères d'acceptation
-./dreamscape-infrastructure/scripts/test-core-pod.sh all
+./dreamscape-infra/scripts/test-core-pod.sh all
 
 # Build et démarrage
-./dreamscape-infrastructure/scripts/test-core-pod.sh build
-./dreamscape-infrastructure/scripts/test-core-pod.sh start
+./dreamscape-infra/scripts/test-core-pod.sh build
+./dreamscape-infra/scripts/test-core-pod.sh start
 
 # Tests spécifiques
-./dreamscape-infrastructure/scripts/test-core-pod.sh test-restart
-./dreamscape-infrastructure/scripts/test-core-pod.sh test-zombies
-./dreamscape-infrastructure/scripts/test-core-pod.sh acceptance
+./dreamscape-infra/scripts/test-core-pod.sh test-restart
+./dreamscape-infra/scripts/test-core-pod.sh test-zombies
+./dreamscape-infra/scripts/test-core-pod.sh acceptance
 ```
 
 ### Gestion Supervisor
@@ -214,7 +214,7 @@ docker exec dreamscape-core-pod python3 /app/scripts/core_pod_health_check.py
 docker exec dreamscape-core-pod cat /tmp/memory_metrics.json
 
 # Status global
-./dreamscape-infrastructure/scripts/test-core-pod.sh status
+./dreamscape-infra/scripts/test-core-pod.sh status
 ```
 
 ---

@@ -200,7 +200,7 @@ docker-compose -f docker-compose.core-services.yml up -d
 ### Automated Build Tests
 Use the provided test script:
 ```bash
-./dreamscape-infrastructure/scripts/test-builds.sh
+./dreamscape-infra/scripts/test-builds.sh
 ```
 
 **Test Coverage**:
