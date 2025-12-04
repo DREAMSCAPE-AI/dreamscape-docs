@@ -82,6 +82,25 @@ Documentation de l'observabilité et du monitoring.
 - [Logging Strategy](monitoring/logging.md) - Stratégie de logging
 - [Alerting](monitoring/alerting.md) - Configuration des alertes
 
+### 📖 Guides (`guides/`)
+Documentation des guides de développement et conventions.
+
+- **[CLAUDE.md](guides/CLAUDE.md)** ⭐ - Instructions pour Claude Code (AI assistant)
+- [Conventions/](guides/conventions/) - Conventions et standards
+  - [Git Conventions Audit](guides/conventions/AUDIT_GIT_CONVENTIONS.md) - Audit des conventions Git
+
+### 📋 Gestion de Projet (`project-management/`)
+Documentation de gestion de projet et conformité.
+
+- [Rapport Conformité PAQ/CDC](project-management/RAPPORT_CONFORMITE_PAQ_CDC.md) - Rapport de conformité qualité
+- [Verification Checklist](project-management/VERIFICATION_CHECKLIST.md) - Liste de vérification projet
+
+### 📝 Résumés (`summaries/`)
+Résumés et tracking des changements importants.
+
+- [CI/CD Refactor Summary](summaries/CICD_REFACTOR_SUMMARY.md) - Résumé de la refactorisation CI/CD
+- [Files Created Summary](summaries/FILES_CREATED_SUMMARY.md) - Tracking des fichiers créés
+
 ## 🎯 Points d'Entrée par Cas d'Usage
 
 ### Je veux déployer l'application
