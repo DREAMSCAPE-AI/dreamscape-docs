@@ -1,0 +1,143 @@
+@startuml DreamScape_Architecture_Simplified
+!theme vibrant
+skinparam linetype ortho
+left to right direction
+
+title DreamScape - Architecture Big Pods \n 3 Big Pods + Infrastructure
+
+' ===============================================
+' External Users
+' ===============================================
+
+actor "Browser" as BROWSER #pink
+
+' ===============================================
+' Experience Pod
+' ===============================================
+package "Experience Pod\n:3000" as EXP_POD #F3E5F5 {
+    component "NGINX\n:80" as NGINX_EXP
+    component "Web Client\n:5173 (Vite)" as WEB
+    component "Panorama\n:3006 (VR)" as PAN
+    component "Gateway\n:4000 (Proxy)" as GATE
+    component "Supervisor" as SUP_EXP #yellow
+}
+
+' ===============================================
+' Core Pod - API Gateway Principal
+' ===============================================
+package "Core Pod\n:80" as CORE_POD #E3F2FD {
+    component "NGINX Gateway\n:80/:443" as NGINX #4A90E2
+    component "Auth\n:3001" as AUTH
+    component "User\n:3002" as USER
+    component "Supervisor" as SUP_CORE #yellow
+}
+
+' ===============================================
+' Business Pod
+' ===============================================
+package "Business Pod" as BIZ_POD #FFF3E0 {
+    component "Voyage\n:3003" as VOYAGE
+    component "AI\n:3004" as AI
+    component "Payment\n:3005" as PAYMENT
+    component "Supervisor" as SUP_BIZ #yellow
+}
+
+' ===============================================
+' Infrastructure
+' ===============================================
+database "PostgreSQL\n:5432" as PG #E8F5E9
+database "Redis\n:6379" as REDIS #E8F5E9
+queue "Kafka\n:9092" as KAFKA #E8F5E9
+storage "MinIO\n:9000" as MINIO #E8F5E9
+
+' ===============================================
+' Main User Flow
+' ===============================================
+
+BROWSER -down-> NGINX_EXP : "Web UI"
+NGINX_EXP -down-> WEB : "reverse proxy"
+WEB -down-> GATE : "API calls"
+GATE -down-> NGINX : "http://core-pod:80"
+
+' ===============================================
+' Core Pod Internal (localhost = fast!)
+' ===============================================
+NGINX -down-> AUTH : "localhost:3001\n5-15ms"
+NGINX -down-> USER : "localhost:3002\n5-15ms"
+
+' ===============================================
+' Inter-Pod Communication
+' ===============================================
+NGINX ..> VOYAGE : "HTTP\n20-50ms"
+NGINX ..> AI : "HTTP\n20-50ms"
+NGINX ..> PAYMENT : "HTTP\n20-50ms"
+
+' ===============================================
+' Supervisor Management
+' ===============================================
+SUP_EXP .up.> NGINX_EXP
+SUP_EXP .up.> WEB
+SUP_EXP .up.> PAN
+SUP_EXP .up.> GATE
+
+SUP_CORE .up.> NGINX
+SUP_CORE .up.> AUTH
+SUP_CORE .up.> USER
+
+SUP_BIZ .up.> VOYAGE
+SUP_BIZ .up.> AI
+SUP_BIZ .up.> PAYMENT
+
+' ===============================================
+' Infrastructure Connections
+' ===============================================
+AUTH --> PG
+AUTH --> REDIS
+USER --> PG
+USER --> REDIS
+
+VOYAGE --> PG
+VOYAGE --> KAFKA
+AI --> PG
+AI --> KAFKA
+AI --> MINIO
+PAYMENT --> PG
+
+PAN --> MINIO
+PAN --> REDIS
+
+' ===============================================
+' Notes
+' ===============================================
+note right of NGINX
+  **API Gateway Principal**
+  
+  Routes:
+  • /api/v1/auth → localhost:3001
+  • /api/v1/users → localhost:3002
+  • /api/v1/voyages → business-pod:3003
+  
+  Avantage localhost:
+  ⚡ 5-15ms (vs 50-100ms HTTP)
+end note
+
+note right of GATE
+  **Frontend Proxy**
+  
+  Rôle secondaire:
+  • Proxy vers Core Pod NGINX
+  • WebSocket support
+  • Request logging
+end note
+
+note bottom of PG
+  **Infrastructure Partagée**
+  
+  Tous les pods connectés
+  • PostgreSQL: données
+  • Redis: cache + sessions
+  • Kafka: événements
+  • MinIO: stockage S3
+end note
+
+@enduml

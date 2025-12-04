@@ -1,0 +1,150 @@
+sequenceDiagram
+    autonumber
+    actor User as 👤 Utilisateur
+    participant WC as Web Client
+    participant CN as Core NGINX<br/>:80
+    participant Voyage as Voyage Service<br/>:3003
+    participant Payment as Payment Service<br/>:3005
+    participant AI as AI Service<br/>:3004
+    participant PG as PostgreSQL<br/>:5432
+    participant Redis as Redis<br/>:6379
+    participant Kafka as Kafka<br/>:9092
+    participant Stripe as 💳 Stripe API
+
+    rect rgb(255, 250, 240)
+        Note over User,Voyage: Phase 1: Sélection Vol
+        User->>WC: Sélectionne vol<br/>(PAR → NYC, €450)
+        WC->>WC: Add to cart<br/>(Redux state)
+        User->>WC: Click "Réserver"
+        
+        WC->>CN: POST /api/v1/bookings<br/>{flightId, passengers, paymentMethod}<br/>Authorization: Bearer JWT
+        CN->>CN: Validate JWT (Auth Service)
+        CN->>Voyage: Forward to Voyage<br/>localhost:3003/bookings
+    end
+
+    rect rgb(240, 248, 255)
+        Note over Voyage,Kafka: Phase 2: Création Réservation
+        Voyage->>Voyage: Extract userId from JWT
+        Voyage->>PG: BEGIN transaction
+        Note right of PG: 🔄 ACID transaction<br/>pour cohérence
+        
+        Voyage->>PG: INSERT booking<br/>{userId, flightId, status: "PENDING",<br/>amount: 450, passengers}
+        PG-->>Voyage: Booking created (bookingId)
+        
+        Voyage->>Redis: Store booking temp<br/>key: "booking:temp:bookingId"<br/>TTL: 15min
+        Note right of Redis: ⏱️ Timeout si paiement<br/>échoue après 15min
+        
+        Voyage->>Kafka: Publish event<br/>Topic: "voyage.booking.created"<br/>{bookingId, userId, flightId}
+        Note left of Kafka: Event-Driven Architecture<br/>- Decoupling services<br/>- Async processing<br/>- Audit trail
+        
+        Voyage-->>CN: 201 Created<br/>{bookingId, paymentIntent: null,<br/>status: "PENDING"}
+        CN-->>WC: 201 Created
+    end
+
+    rect rgb(240, 255, 240)
+        Note over WC,Stripe: Phase 3: Demande Paiement
+        WC->>CN: POST /api/v1/payments/intent<br/>{bookingId, amount: 450, currency: "EUR"}<br/>Authorization: Bearer JWT
+        CN->>Payment: Forward to Payment<br/>localhost:3005/payments/intent
+        
+        Payment->>Payment: Extract userId from JWT
+        Payment->>PG: Verify booking exists<br/>SELECT * FROM bookings<br/>WHERE id = bookingId AND userId = userId
+        
+        alt Booking Non Trouvé ❌
+            PG-->>Payment: null
+            Payment-->>CN: 404 Not Found<br/>{error: "Booking not found"}
+            CN-->>WC: 404 Error
+            WC->>User: ❌ Erreur réservation
+        else Booking Trouvé ✅
+            PG-->>Payment: Booking found
+            Payment->>Stripe: Create PaymentIntent<br/>POST /v1/payment_intents<br/>{amount: 45000 (cents),<br/>currency: "eur",<br/>metadata: {bookingId}}
+            
+            Stripe-->>Payment: PaymentIntent created<br/>{id: "pi_...",<br/>client_secret: "...",<br/>status: "requires_payment_method"}
+            
+            Payment->>PG: INSERT payment<br/>{bookingId, stripePaymentIntentId,<br/>amount, status: "PENDING"}
+            Payment->>Kafka: Publish event<br/>Topic: "payment.intent.created"<br/>{bookingId, paymentIntentId}
+            
+            Payment-->>CN: 200 OK<br/>{clientSecret, paymentIntentId}
+            CN-->>WC: 200 OK
+        end
+    end
+
+    rect rgb(255, 245, 245)
+        Note over WC,Stripe: Phase 4: Paiement Stripe (Frontend)
+        WC->>WC: Initialize Stripe.js<br/>with clientSecret
+        WC->>User: Affiche formulaire carte<br/>(Stripe Elements)
+        
+        User->>WC: Saisit infos carte<br/>(numéro, CVC, expiration)
+        WC->>Stripe: POST /v1/payment_intents/:id/confirm<br/>(via Stripe.js)<br/>{payment_method: "pm_..."}
+        
+        Note right of Stripe: 🔒 Sécurité PCI-DSS<br/>- Carte jamais envoyée à notre backend<br/>- Stripe gère tout<br/>- Tokenization automatique
+        
+        alt Paiement Réussi ✅
+            Stripe-->>WC: PaymentIntent succeeded
+            WC->>WC: Display success message
+            WC->>User: ✅ Paiement accepté
+        else Paiement Échoué ❌
+            Stripe-->>WC: PaymentIntent failed<br/>(insufficient_funds)
+            WC->>User: ❌ "Paiement refusé"<br/>(fonds insuffisants)
+        end
+    end
+
+    rect rgb(245, 245, 255)
+        Note over Stripe,Kafka: Phase 5: Webhook Stripe (Backend)
+        Stripe->>Payment: POST /webhooks/stripe<br/>Stripe-Signature header<br/>{type: "payment_intent.succeeded",<br/>data: {paymentIntentId}}
+        
+        Payment->>Payment: Verify signature<br/>stripe.webhooks.constructEvent()
+        
+        alt Signature Invalide ❌
+            Payment-->>Stripe: 400 Bad Request
+            Note right of Payment: Protection contre<br/>webhooks forgés
+        else Signature Valide ✅
+            Payment->>PG: UPDATE payment<br/>SET status = "SUCCEEDED"<br/>WHERE stripePaymentIntentId = id
+            
+            Payment->>PG: UPDATE booking<br/>SET status = "CONFIRMED"<br/>WHERE id = bookingId
+            
+            Payment->>Redis: Delete temp booking<br/>DEL "booking:temp:bookingId"
+            
+            Payment->>Kafka: Publish event<br/>Topic: "payment.succeeded"<br/>{bookingId, amount}
+            
+            Payment-->>Stripe: 200 OK
+        end
+    end
+
+    rect rgb(255, 250, 240)
+        Note over Kafka,User: Phase 6: Traitement Async (Kafka Consumers)
+        Kafka->>Voyage: Consume event<br/>"payment.succeeded"
+        Voyage->>PG: SELECT booking details
+        Voyage->>Voyage: Generate confirmation email<br/>(Nodemailer)
+        Voyage->>User: 📧 Email confirmation<br/>+ PDF billet
+        
+        Kafka->>AI: Consume event<br/>"voyage.booking.created"
+        AI->>PG: Get user profile<br/>+ booking history
+        AI->>AI: Update ML model<br/>(collaborative filtering)
+        Note right of AI: 🤖 AI learning<br/>from user behavior
+        AI->>Redis: Update recommendations<br/>key: "reco:userId"
+    end
+
+    rect rgb(240, 248, 255)
+        Note over WC,User: Phase 7: Confirmation Frontend
+        loop Polling every 2s
+            WC->>CN: GET /api/v1/bookings/:bookingId
+            CN->>Voyage: Forward request
+            Voyage->>PG: SELECT booking<br/>WHERE id = bookingId
+            
+            alt Status = CONFIRMED ✅
+                PG-->>Voyage: Booking confirmed
+                Voyage-->>CN: 200 OK<br/>{status: "CONFIRMED"}
+                CN-->>WC: 200 OK
+                WC->>WC: Stop polling
+                WC->>WC: Redirect /bookings/:id
+                WC->>User: ✅ Affiche confirmation<br/>+ détails voyage
+            else Status = PENDING ⏳
+                PG-->>Voyage: Booking still pending
+                Voyage-->>CN: 200 OK<br/>{status: "PENDING"}
+                CN-->>WC: 200 OK (continue polling)
+                Note right of WC: ⏱️ Après 15min<br/>réservation annulée<br/>automatiquement
+            end
+        end
+    end
+
+    Note over User,Kafka: 📊 Performance Réservation<br/>Create booking: ~100-150ms<br/>Payment intent: ~500-800ms (Stripe)<br/>Confirmation: ~1-2s (Stripe webhook)<br/>Email: ~3-5s (async)<br/><br/>🔒 Fiabilité<br/>- Transaction ACID (Postgres)<br/>- Idempotency keys (Stripe)<br/>- Webhook retry (Stripe: 3 tentatives)<br/>- Event sourcing (Kafka)

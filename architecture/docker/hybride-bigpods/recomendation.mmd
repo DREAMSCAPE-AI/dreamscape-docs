@@ -1,0 +1,121 @@
+sequenceDiagram
+    autonumber
+    actor User as 👤 Utilisateur
+    participant WC as Web Client
+    participant CN as Core NGINX
+    participant AI as AI Service<br/>:3004<br/>(Python FastAPI)
+    participant PG as PostgreSQL<br/>:5432
+    participant Redis as Redis<br/>:6379
+    participant OpenAI as 🤖 OpenAI API
+    participant Voyage as Voyage Service<br/>:3003
+
+    rect rgb(255, 250, 240)
+        Note over User,AI: Phase 1: Demande Recommandations
+        User->>WC: Ouvre dashboard
+        WC->>CN: GET /api/v1/recommendations<br/>?type=destinations<br/>Authorization: Bearer JWT
+        
+        CN->>CN: Validate JWT<br/>(extract userId)
+        CN->>AI: Forward request<br/>http://business-pod:8082/recommendations<br/>X-User-Id: {userId}
+    end
+
+    rect rgb(240, 248, 255)
+        Note over AI,Redis: Phase 2: Cache Check
+        AI->>AI: Extract userId from header
+        AI->>Redis: Check cache<br/>key: "reco:userId:destinations"
+        
+        alt Cache HIT ⚡
+            Redis-->>AI: Cached recommendations<br/>[{dest: "Paris", score: 0.95},<br/>{dest: "Rome", score: 0.89}]
+            Note left of Redis: Latency: ~5-10ms<br/>Cache hit!
+            
+            AI-->>CN: 200 OK<br/>{recommendations: [...]}
+            CN-->>WC: 200 OK
+            WC->>User: ✅ Affiche recommandations
+        else Cache MISS 💾
+            Redis-->>AI: null
+            Note right of Redis: Cache MISS<br/>→ Génération ML
+        end
+    end
+
+    rect rgb(240, 255, 240)
+        Note over AI,PG: Phase 3: Collecte Données Utilisateur
+        AI->>PG: Get user profile<br/>SELECT * FROM UserProfile<br/>WHERE userId = userId
+        PG-->>AI: User profile<br/>{category: "LEISURE",<br/>preferences: ["culture", "gastronomie"],<br/>budget: "medium"}
+        
+        AI->>PG: Get booking history<br/>SELECT * FROM bookings<br/>WHERE userId = userId<br/>ORDER BY createdAt DESC LIMIT 10
+        PG-->>AI: Past bookings<br/>[{dest: "Paris", date: "2024-01"},<br/>{dest: "Barcelona", date: "2023-12"}]
+        
+        AI->>PG: Get search history<br/>SELECT DISTINCT destination<br/>FROM search_logs<br/>WHERE userId = userId<br/>ORDER BY timestamp DESC LIMIT 20
+        PG-->>AI: Search patterns<br/>["Tokyo", "Kyoto", "Osaka"]
+    end
+
+    rect rgb(255, 245, 245)
+        Note over AI,AI: Phase 4: ML Inference (Collaborative Filtering)
+        AI->>AI: Load ML model<br/>(TensorFlow SavedModel)
+        Note right of AI: 🤖 Model Details<br/>Type: Collaborative Filtering<br/>Input: User features (384 dims)<br/>Output: Destination scores<br/>Training: 100k+ bookings
+        
+        AI->>AI: Prepare feature vector<br/>[user_category_onehot,<br/>avg_trip_duration,<br/>preferred_season,<br/>budget_level,<br/>past_destinations_embedding]
+        
+        AI->>AI: Model inference<br/>model.predict(user_features)
+        Note right of AI: ⚡ Inference time<br/>~50-100ms<br/>(GPU accelerated)
+        
+        AI->>AI: Get top 20 destinations<br/>sorted by score
+    end
+
+    rect rgb(245, 245, 255)
+        Note over AI,Voyage: Phase 5: Enrichissement Contextuel
+        AI->>Voyage: Batch request prices<br/>POST /api/v1/flights/batch-prices<br/>{destinations: ["Paris", "Rome", ...],<br/>origin: user_location}
+        
+        Voyage->>Redis: Check cache<br/>for each destination
+        
+        alt Some Cached
+            Voyage->>Voyage: Get cached prices
+        end
+        
+        Voyage->>Voyage: Query Amadeus API<br/>(for non-cached)
+        Voyage-->>AI: Price data<br/>[{dest: "Paris", price: 350},<br/>{dest: "Rome", price: 420}]
+        
+        AI->>AI: Combine ML scores + prices<br/>score_final = 0.7 * ml_score + 0.3 * price_score
+        AI->>AI: Filter by user budget<br/>(remove destinations > budget)
+        AI->>AI: Apply business rules<br/>- Remove recently visited<br/>- Seasonal adjustments<br/>- Event-based boost
+    end
+
+    rect rgb(255, 250, 240)
+        Note over AI,OpenAI: Phase 6: Génération Descriptions (OpenAI)
+        loop For top 5 destinations
+            AI->>OpenAI: POST /v1/chat/completions<br/>Model: gpt-4-turbo<br/>Prompt: "Generate personalized<br/>travel description for {dest}<br/>based on user profile: {profile}"
+            
+            OpenAI-->>AI: Completion<br/>{description: "Paris awaits...",<br/>highlights: [...]}
+            
+            Note right of OpenAI: 💰 Cost: ~$0.01/request<br/>🕐 Latency: ~2-3s
+        end
+    end
+
+    rect rgb(240, 248, 255)
+        Note over AI,User: Phase 7: Finalisation
+        AI->>AI: Assemble final response<br/>[{destination: "Paris",<br/>score: 0.95, price: 350,<br/>description: "...",<br/>highlights: [...],<br/>bestSeason: "Spring"}]
+        
+        AI->>Redis: Cache recommendations<br/>key: "reco:userId:destinations"<br/>value: JSON, TTL: 1 hour
+        Note right of Redis: 💾 Cache pour 1h<br/>→ Refresh si nouvelles<br/>réservations
+        
+        AI-->>CN: 200 OK<br/>{recommendations: [...]}
+        CN-->>WC: 200 OK
+        WC->>WC: Render RecommendationsSection
+        WC->>User: ✅ Affiche cartes destinations<br/>personnalisées
+    end
+
+    rect rgb(240, 255, 240)
+        Note over User,Redis: Phase 8: Tracking Interaction
+        User->>WC: Click on "Paris" card
+        WC->>CN: POST /api/v1/analytics/interaction<br/>{type: "recommendation_click",<br/>destination: "Paris", score: 0.95}
+        
+        CN->>AI: Forward event
+        AI->>PG: INSERT INTO user_interactions<br/>{userId, action: "click_recommendation",<br/>destination: "Paris", timestamp: NOW()}
+        
+        Note right of PG: 📊 Analytics<br/>- Click-through rate<br/>- Conversion rate<br/>- Model performance<br/>→ Retrain model weekly
+        
+        AI->>Redis: Increment counter<br/>key: "analytics:reco:clicks:Paris"
+        AI-->>CN: 200 OK
+        CN-->>WC: 200 OK
+    end
+
+    Note over User,OpenAI: 📊 Performance Recommandations<br/>Cache HIT: ~10-20ms ⚡<br/>Cache MISS (ML only): ~200-500ms<br/>Cache MISS (ML + OpenAI): ~3-5s<br/>Model accuracy: ~85% CTR<br/>Daily requests: ~50k<br/><br/>⚡ Optimisations<br/>- Batch price requests (1 API call)<br/>- Redis cache (1h TTL)<br/>- GPU inference (TensorFlow)<br/>- OpenAI rate limiting (5 req/s)<br/>- Async OpenAI calls (Future: parallel)
