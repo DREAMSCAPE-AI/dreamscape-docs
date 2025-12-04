@@ -1,209 +1,180 @@
-# Dépôt de Documentation DreamScape
+# DreamScape Documentation Hub
 
-## À propos
+Bienvenue dans la documentation centralisée du projet DreamScape - une plateforme de voyage innovante combinant l'intelligence artificielle contextuelle et la réalité virtuelle.
 
-Ce dépôt centralise toute la documentation technique et fonctionnelle du projet DreamScape, une plateforme innovante de voyage combinant intelligence artificielle contextuelle et expériences panoramiques immersives pour offrir des expériences de voyage personnalisées.
+## 📚 Structure de la Documentation
 
-Ce référentiel sert de source unique de vérité pour tous les aspects documentaires du projet, permettant une gestion efficace des connaissances malgré notre rythme de développement de 2 jours par semaine.
+### 🏗️ Infrastructure (`infrastructure/`)
+Documentation de l'architecture, du déploiement et de la gestion de l'infrastructure.
 
-## Structure du dépôt
+- [Architecture Overview](infrastructure/ARCHITECTURE.md) - Vue d'ensemble de l'architecture système
+- [Big Pods Guide](infrastructure/bigpods-guide.md) - Guide complet des Big Pods
+- [Big Pods Scripts](infrastructure/bigpods-scripts.md) - Scripts d'automatisation
+- [Migration Kubernetes](infrastructure/migration-kubernetes.md) - Guide de migration K8s
+- [Configuration Guide](infrastructure/configuration-guide.md) - Configuration système
+- [Deployment Guide](infrastructure/deployment-guide.md) - Guide de déploiement
+- [Infrastructure Guide](infrastructure/infrastructure-guide.md) - Guide d'infrastructure complet
+- [Kubernetes Setup](infrastructure/kubernetes-setup.md) - Configuration K8s
+- [Monitoring](infrastructure/monitoring.md) - Observabilité et monitoring
+- [Network Architecture](infrastructure/network-architecture.md) - Architecture réseau
+- [Redis Cache](infrastructure/redis-cache.md) - Configuration Redis
+- [Scripts Index](infrastructure/scripts-index.md) - Index des scripts d'automatisation
 
-La documentation est organisée pour centraliser toute la documentation de l'écosystème DreamScape :
+### 🔧 Services Backend (`services/`)
+Documentation des microservices backend (Node.js/Express/TypeScript).
 
+- [Auth Service](services/auth-service.md) - Service d'authentification
+- [User Service](services/user-service.md) - Service de gestion utilisateurs
+- [Voyage Service](services/voyage-service.md) - Service de recherche de voyages
+- [Payment Service](services/payment-service.md) - Service de paiement
+- [AI Service](services/ai-service.md) - Service d'IA contextuelle
+- [Amadeus Integration](services/amadeus-integration.md) - Intégration API Amadeus
+- [OpenAI Integration](services/openai-integration.md) - Intégration OpenAI
+- [Stripe Integration](services/stripe-integration.md) - Intégration Stripe
+- [Database Schema](services/database-schema.md) - Schéma Prisma partagé
+- [Kafka Events](services/kafka-events.md) - Architecture événementielle
+- [Services Overview](services/services-overview.md) - Vue d'ensemble des services
+
+### 🎨 Frontend (`frontend/`)
+Documentation des applications frontend (React/Vite).
+
+- [Web Client](frontend/web-client.md) - Application web React
+- [API Gateway](frontend/gateway.md) - Passerelle API Gateway
+- [Panorama VR](frontend/panorama.md) - Interface VR immersive
+- [Frontend Architecture](frontend/frontend-architecture.md) - Architecture frontend
+- [Frontend Overview](frontend/frontend-overview.md) - Vue d'ensemble frontend
+
+### 🧪 Tests (`tests/`)
+Documentation de la stratégie de test et des suites de tests.
+
+- [Profile User Tests](tests/profile-user-tests.md) - Tests du profil utilisateur (DR-59)
+- [Amadeus Integration Tests](tests/amadeus-integration-tests.md) - Tests Amadeus (DR-61)
+- [Big Pods Tests](tests/bigpods-tests.md) - Tests des Big Pods (DR-331)
+- [Profile Tests README](tests/PROFILE_TESTS_README.md) - Documentation tests profil
+- [Tests Overview](tests/README.md) - Vue d'ensemble de la stratégie de test
+- [Test Scripts](tests/test-scripts.md) - Scripts de test
+
+### 🚀 CI/CD (`cicd/`)
+Documentation de l'intégration continue et du déploiement continu.
+
+- [CI/CD Overview](cicd/cicd-overview.md) - Vue d'ensemble CI/CD
+- [CI/CD Refactor](cicd/cicd-refactor.md) - Refactorisation CI/CD
+- [GitHub Actions](cicd/github-actions.md) - Configuration GitHub Actions
+- [Deployment Pipeline](cicd/deployment-pipeline.md) - Pipeline de déploiement
+- [Environment Management](cicd/environment-management.md) - Gestion des environnements
+- [Multi-Repo Strategy](cicd/multi-repo-strategy.md) - Stratégie multi-dépôts
+
+### 🐳 Docker (`docker/`)
+Documentation des conteneurs et de l'orchestration Docker.
+
+- [Docker Overview](docker/docker-overview.md) - Vue d'ensemble Docker
+- [Docker Compose](docker/docker-compose.md) - Configuration Docker Compose
+- [Dockerfiles Guide](docker/dockerfiles-guide.md) - Guide des Dockerfiles
+- [Big Pods Docker](docker/bigpods-docker.md) - Architecture Big Pods
+- [Multi-Stage Builds](docker/multi-stage-builds.md) - Builds multi-étapes
+
+### 📊 Monitoring (`monitoring/`)
+Documentation de l'observabilité et du monitoring.
+
+- [Monitoring Overview](monitoring/monitoring-overview.md) - Vue d'ensemble monitoring
+- [Prometheus Setup](monitoring/prometheus.md) - Configuration Prometheus
+- [Grafana Dashboards](monitoring/grafana.md) - Tableaux de bord Grafana
+- [Logging Strategy](monitoring/logging.md) - Stratégie de logging
+- [Alerting](monitoring/alerting.md) - Configuration des alertes
+
+## 🎯 Points d'Entrée par Cas d'Usage
+
+### Je veux déployer l'application
+1. [Architecture Overview](infrastructure/ARCHITECTURE.md) - Comprendre l'architecture
+2. [Deployment Guide](infrastructure/deployment-guide.md) - Guide de déploiement
+3. [Docker Overview](docker/docker-overview.md) - Comprendre Docker
+4. [CI/CD Overview](cicd/cicd-overview.md) - Pipeline de déploiement
+
+### Je veux développer un nouveau service
+1. [Services Overview](services/services-overview.md) - Architecture des services
+2. [Database Schema](services/database-schema.md) - Schéma de données
+3. [Kafka Events](services/kafka-events.md) - Communication inter-services
+4. [Frontend Architecture](frontend/frontend-architecture.md) - Intégration frontend
+
+### Je veux écrire des tests
+1. [Tests Overview](tests/README.md) - Stratégie de test
+2. [Profile User Tests](tests/profile-user-tests.md) - Exemple de tests complets
+3. [Test Scripts](tests/test-scripts.md) - Scripts de test disponibles
+
+### Je veux comprendre l'infrastructure
+1. [Architecture Overview](infrastructure/ARCHITECTURE.md) - Architecture système
+2. [Network Architecture](infrastructure/network-architecture.md) - Architecture réseau
+3. [Kubernetes Setup](infrastructure/kubernetes-setup.md) - Configuration K8s
+4. [Big Pods Guide](infrastructure/bigpods-guide.md) - Architecture Big Pods
+
+### Je veux configurer le monitoring
+1. [Monitoring Overview](monitoring/monitoring-overview.md) - Vue d'ensemble
+2. [Prometheus Setup](monitoring/prometheus.md) - Configuration Prometheus
+3. [Grafana Dashboards](monitoring/grafana.md) - Tableaux de bord
+4. [Alerting](monitoring/alerting.md) - Configuration alertes
+
+## 🔗 Liens Rapides
+
+### Repositories
+- [dreamscape-services](https://github.com/DREAMSCAPE-AI/dreamscape-services) - Services backend
+- [dreamscape-frontend](https://github.com/DREAMSCAPE-AI/dreamscape-frontend) - Applications frontend
+- [dreamscape-infra](https://github.com/DREAMSCAPE-AI/dreamscape-infra) - Infrastructure et scripts
+- [dreamscape-tests](https://github.com/DREAMSCAPE-AI/dreamscape-tests) - Suite de tests
+
+### Jira
+- [Tableau Jira DreamScape](https://epitech-team-t7wc668a.atlassian.net/) - Gestion de projet
+
+### Documentation Technique
+- [Amadeus API](https://developers.amadeus.com/) - Documentation API Amadeus
+- [Stripe API](https://stripe.com/docs/api) - Documentation API Stripe
+- [OpenAI API](https://platform.openai.com/docs) - Documentation API OpenAI
+
+## 📝 Conventions
+
+### Branches
 ```
-documentation/
-├── services/                        # Documentation par service
-│   ├── auth-service/                # Service d'authentification
-│   ├── voyage-service/              # Service de voyage principal
-│   ├── ai-service/                  # Service d'IA et recommandations
-│   ├── user-service/                # Service de gestion utilisateur
-│   ├── payment-service/             # Service de paiement
-│   └── panorama-service/            # Service de vues panoramiques
-│
-├── infrastructure/                  # Documentation infrastructure
-│   ├── cicd/                        # CI/CD et déploiement
-│   ├── docker/                      # Configuration Docker
-│   └── kubernetes/                  # Déploiement Kubernetes
-│
-├── guides/                          # Guides techniques
-│   ├── setup/                       # Guides d'installation
-│   ├── deployment/                  # Guides de déploiement
-│   └── development/                 # Guides de développement
-│
-├── summaries/                       # Résumés d'implémentation
-│   ├── IMPLEMENTATION-SUMMARY-DR334.md
-│   ├── IMPLEMENTATION-SUMMARY-DR336.md
-│   └── TESTS_IMPLEMENTATION_SUMMARY.md
-│
-├── LICENSE                          # Licence du repository
-└── README.md                        # Ce fichier
-```
-
-## Installation et utilisation
-
-### Prérequis
-
-- Node.js 18 ou supérieur
-- Yarn ou npm
-
-### Installation locale
-
-```bash
-# Cloner le dépôt
-git clone https://github.com/dreamscape/dreamscape-documentation.git
-
-# Installer les dépendances
-cd dreamscape-documentation
-yarn install
-
-# Démarrer le serveur de développement
-yarn start
-```
-
-La documentation sera accessible à l'adresse http://localhost:3000.
-
-### Génération de la documentation
-
-```bash
-# Construire le site statique
-yarn build
-
-# Servir le site construit localement
-yarn serve
-```
-
-## Comment contribuer
-
-### Principes généraux
-
-1. **Documentation as Code** : La documentation est traitée comme du code, avec versionnement, revues et tests.
-2. **Format Markdown** : Les documents sont rédigés en Markdown enrichi de fonctionnalités Docusaurus (admonitions, tabs, etc.).
-3. **Diagrammes as Code** : Les diagrammes sont créés avec Mermaid, intégrés directement dans les documents Markdown.
-4. **Revue par les pairs** : Chaque modification significative doit être revue par au moins un autre membre de l'équipe.
-
-### Structure des documents
-
-Chaque document Markdown doit commencer par un en-tête frontmatter :
-
-```markdown
----
-id: nom-unique-du-document
-title: Titre du document
-description: Brève description du contenu
-sidebar_label: Libellé dans la barre latérale
-sidebar_position: 1
-tags: [tag1, tag2]
----
-
-Contenu du document...
-```
-
-### Procédure de contribution
-
-1. Créez une branche à partir de `main` avec le format `doc/[module]/[sujet]`
-2. Effectuez vos modifications en respectant la structure Docusaurus
-3. Prévisualisez vos modifications avec `yarn start`
-4. Soumettez une Pull Request avec un titre clair
-5. Demandez une revue à au moins un membre de l'équipe concernée
-6. Une fois approuvée, la PR peut être fusionnée dans `main`
-
-### Utilisation des fonctionnalités Docusaurus
-
-Docusaurus offre plusieurs fonctionnalités pour enrichir la documentation :
-
-- **Admonitions** : Encadrés pour mettre en évidence des informations importantes
-  ```markdown
-  :::note Titre
-  Contenu de la note
-  :::
-
-  :::warning
-  Avertissement important
-  :::
-  ```
-
-- **Onglets** : Pour présenter des alternatives (ex: différentes plateformes)
-  ```markdown
-  import Tabs from '@theme/Tabs';
-  import TabItem from '@theme/TabItem';
-
-  <Tabs>
-    <TabItem value="web" label="Web">Contenu web</TabItem>
-    <TabItem value="mobile" label="Mobile">Contenu mobile</TabItem>
-  </Tabs>
-  ```
-
-- **Diagrammes Mermaid** : Pour des diagrammes techniques
-  ```markdown
-  ```mermaid
-  graph TD;
-      A-->B;
-      A-->C;
-      B-->D;
-      C-->D;
-  ```
-  ```
-
-## Intégration continue
-
-Le dépôt utilise GitHub Actions pour l'intégration continue :
-
-1. **Documentation CI** : Vérifie la validité de la documentation à chaque pull request
-   - Linting Markdown
-   - Validation des liens internes
-   - Construction du site Docusaurus
-
-2. **Documentation CD** : Déploie automatiquement le site après fusion dans `main`
-   - Construction du site statique
-   - Déploiement sur GitHub Pages ou notre serveur interne
-   - Génération de versions PDF pour téléchargement
-
-## Versionnement de la documentation
-
-Docusaurus permet le versionnement de la documentation, ce qui est particulièrement utile pour suivre les évolutions du projet :
-
-- **Version courante** : Documentation de la dernière version (`next`)
-- **Versions stables** : Documentation des jalons majeurs (ex: MVP, Release 1.0)
-
-Les commandes pour gérer les versions :
-
-```bash
-# Créer une nouvelle version à partir de la documentation actuelle
-yarn run docusaurus docs:version 1.0.0
-
-# Construire toutes les versions
-yarn build
+feature/service-name/description
+fix/service-name/description
+test/service-name/description
+docs/description
 ```
 
-## Recherche et navigation
+### Commits
+```
+feat: nouvelle fonctionnalité
+fix: correction de bug
+test: ajout de tests
+docs: mise à jour documentation
+refactor: refactorisation
+style: formatting
+chore: tâches maintenance
+```
 
-La documentation intègre Algolia DocSearch pour une recherche performante :
+## 🚦 Statut du Projet
 
-- Indexation automatique du contenu
-- Recherche instantanée
-- Suggestions pertinentes
+- **CI/CD Pipeline**: ✅ Fonctionnel sur tous les environnements (dev, staging, production)
+- **Docker**: ✅ Tous les services ont des Dockerfile.prod
+- **Tests**: ✅ Suites de tests complètes (unit, integration, e2e)
+- **K8s Deployment**: ⚠️ En attente de configuration réseau
+- **Monitoring**: ✅ Prometheus + Grafana configurés
 
-La navigation est facilitée par :
-- Une barre latérale organisée thématiquement
-- Des liens contextuels entre documents liés
-- Un fil d'Ariane pour situer le document dans la hiérarchie
+## 🤝 Contribution
 
-## Contacts
+Ce projet suit un rythme de développement de **2 jours par semaine**. Pour cette raison:
+- Documentation complète et à jour est critique
+- Tests automatisés sont obligatoires
+- Chaque PR doit inclure sa documentation
+- Les commits doivent être descriptifs
 
-Pour toute question concernant la documentation :
+## 📞 Support
 
-- **Responsable documentation** : Kevin Coutellier
-- **Canal Slack** : #dreamscape-documentation
-- **Email** : documentation@dreamscape.internal
-
-## Planning de mise à jour
-
-La documentation suit un cycle de mise à jour régulier :
-
-- **Mise à jour majeure** : À la fin de chaque phase du projet, avec création d'une nouvelle version
-- **Mise à jour mineure** : À la fin de chaque sprint, reflétée dans les articles de blog
-- **Révision complète** : Avant chaque jalon clé (keynote, MVP)
+Pour toute question:
+- **GitHub Issues**: Créer une issue dans le repo approprié
+- **Documentation**: Consultez d'abord cette doc centralisée
+- **Jira**: Vérifiez les tickets existants
 
 ---
 
-Dernière mise à jour : 20 mai 2025
+**Dernière mise à jour**: 2025-12-04  
+**Version**: 1.0.0  
+**Maintainers**: Équipe DreamScape
