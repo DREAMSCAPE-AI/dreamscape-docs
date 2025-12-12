@@ -1,0 +1,83 @@
+sequenceDiagram
+    autonumber
+    actor User as 👤 Utilisateur
+    participant WC as Web Client<br/>:5173 (React)
+    participant GW as Gateway<br/>:4000 (Node.js)
+    participant EN as Experience NGINX<br/>:80
+    participant CN as Core NGINX<br/>:80
+    participant Auth as Auth Service<br/>:3001
+    participant Voyage as Voyage Service<br/>:3003
+    participant Redis as Redis Cache<br/>:6379
+    participant Amadeus as 🌍 Amadeus API
+
+    rect rgb(240, 248, 255)
+        Note over User,WC: Phase 1: Chargement Initial
+        User->>WC: Ouvre page recherche
+        WC->>WC: Récupère JWT (localStorage)
+        Note right of WC: Token stocké<br/>User authentifié
+    end
+
+    rect rgb(255, 250, 240)
+        Note over User,GW: Phase 2: Saisie Recherche
+        User->>WC: Saisit critères<br/>(PAR → NYC, 2025-06-01)
+        WC->>WC: Validation formulaire
+        WC->>GW: POST /api/v1/flights/search<br/>Authorization: Bearer JWT
+        Note right of GW: Middleware CORS<br/>Request logging
+    end
+
+    rect rgb(240, 255, 240)
+        Note over GW,Auth: Phase 3: Routing & Authentication
+        GW->>EN: Forward request<br/>http://localhost/api/flights
+        EN->>CN: Proxy to Core Pod<br/>http://core-pod:80/api/flights
+        
+        CN->>Auth: Validate JWT<br/>GET /auth/verify
+        Auth->>Auth: Décode JWT + vérifie signature
+        Auth->>Redis: Check blacklist
+        Redis-->>Auth: Token OK
+        
+        alt Token Valide ✅
+            Auth-->>CN: 200 OK<br/>{userId, email, category}
+            Note right of Auth: Latency: 5-15ms<br/>(localhost!)
+        else Token Invalide ❌
+            Auth-->>CN: 401 Unauthorized
+            CN-->>GW: 401 Error
+            GW-->>WC: 401 Error
+            WC->>User: ❌ Redirect /login
+        end
+    end
+
+    rect rgb(255, 245, 245)
+        Note over CN,Amadeus: Phase 4: Recherche Voyage
+        CN->>Voyage: Forward search<br/>POST /flights/search<br/>X-User-Id: {userId}
+        
+        Voyage->>Redis: Check cache<br/>key: "flight:PAR-NYC-2025-06-01"
+        
+        alt Cache HIT ⚡
+            Redis-->>Voyage: Cached results
+            Note right of Redis: Latency: ~50ms<br/>Cache hit!
+        else Cache MISS 🌍
+            Voyage->>Amadeus: Flight Offers Search
+            Note right of Amadeus: External API<br/>Latency: 1.5-3s
+            Amadeus-->>Voyage: Flight offers JSON
+            Voyage->>Redis: Store results<br/>TTL: 30min
+            Note right of Redis: Cache pour<br/>futurs utilisateurs
+        end
+        
+        Voyage->>Voyage: Map DTO interne<br/>(FlightOfferMapper)
+        Voyage-->>CN: 200 OK<br/>{flights: [...]}
+    end
+
+    rect rgb(245, 245, 255)
+        Note over CN,User: Phase 5: Retour Frontend
+        CN-->>EN: Forward response
+        EN-->>GW: Forward response
+        GW-->>WC: 200 OK<br/>{flights, meta}
+        
+        WC->>WC: Parse JSON
+        WC->>WC: Update Redux store<br/>(flightResults)
+        WC->>WC: Render FlightResults
+        
+        WC->>User: ✅ Affiche liste vols
+    end
+
+    Note over User,Amadeus: 📊 Performance Totale<br/>Cache HIT: ~100-200ms<br/>Cache MISS: ~1.5-3s (Amadeus)<br/>JWT validation: ~5-15ms<br/>Gateway overhead: ~10-20ms

@@ -1,0 +1,106 @@
+sequenceDiagram
+    autonumber
+    participant Prom as Prometheus<br/>:9090
+    participant CorePod as Core Pod<br/>NGINX :80
+    participant Auth as Auth Service<br/>:3001
+    participant User as User Service<br/>:3002
+    participant BizPod as Business Pod
+    participant ExpPod as Experience Pod
+    participant PG as PostgreSQL<br/>:5432
+    participant Mongo as MongoDB<br/>:27017
+    participant Redis as Redis<br/>:6379
+    participant Grafana as Grafana<br/>:3000
+    participant Alert as Alertmanager<br/>:9093
+    participant Slack as 💬 Slack
+
+    rect rgb(240, 248, 255)
+        Note over Prom,Redis: Phase 1: Health Checks Périodiques (Every 15s)
+        loop Every 15 seconds
+            Prom->>CorePod: GET /health
+            
+            CorePod->>Auth: GET /health
+            Auth->>Mongo: db.runCommand({ping: 1})
+            Mongo-->>Auth: {ok: 1}
+            Auth->>Redis: PING
+            Redis-->>Auth: PONG
+            Auth-->>CorePod: 200 OK<br/>{status: "healthy",<br/>mongodb: "up", redis: "up",<br/>uptime: 12345}
+            
+            CorePod->>User: GET /health
+            User->>Mongo: db.runCommand({ping: 1})
+            Mongo-->>User: {ok: 1}
+            User-->>CorePod: 200 OK<br/>{status: "healthy",<br/>mongodb: "up"}
+            
+            CorePod->>CorePod: Aggregate health<br/>from all services
+            CorePod-->>Prom: 200 OK<br/>{status: "healthy",<br/>services: {auth: "up", user: "up"}}
+        end
+        
+        loop Every 15 seconds
+            Prom->>BizPod: GET /health
+            BizPod->>PG: SELECT 1
+            PG-->>BizPod: 1
+            BizPod-->>Prom: 200 OK<br/>{status: "healthy", postgres: "up"}
+        end
+        
+        loop Every 15 seconds
+            Prom->>ExpPod: GET /health
+            ExpPod-->>Prom: 200 OK<br/>{status: "healthy"}
+        end
+    end
+
+    rect rgb(255, 250, 240)
+        Note over Prom,BizPod: Phase 2: Collecte Métriques (Every 10s)
+        loop Every 10 seconds
+            Prom->>CorePod: GET /metrics
+            CorePod-->>Prom: Prometheus format<br/># TYPE http_requests_total counter<br/>http_requests_total{method="GET",path="/health"} 1234
+            
+            Prom->>Auth: GET /metrics
+            Auth-->>Prom: # TYPE auth_login_success_total counter<br/>auth_login_success_total 5678<br/>auth_login_failures_total 23
+            
+            Prom->>User: GET /metrics
+            User-->>Prom: # TYPE user_profile_requests_total counter<br/>user_profile_requests_total 3456
+            
+            Prom->>BizPod: GET /metrics
+            BizPod-->>Prom: # TYPE voyage_search_duration_seconds histogram<br/>voyage_search_duration_seconds_bucket{le="0.5"} 234
+        end
+        
+        Note right of Prom: 📊 Métriques collectées<br/>- HTTP requests (count, duration)<br/>- Database queries (count, latency)<br/>- Cache hit/miss ratio<br/>- Error rates (4xx, 5xx)<br/>- Business metrics (bookings, revenue)
+    end
+
+    rect rgb(240, 255, 240)
+        Note over Prom,Slack: Phase 3: Évaluation Règles d'Alerte (Every 15s)
+        Prom->>Prom: Evaluate alert rules
+        Note right of Prom: 🚨 Règles d'Alerte<br/>- HighErrorRate: error_rate > 5%<br/>- SlowResponse: p95_latency > 1s<br/>- ServiceDown: up == 0<br/>- HighMemoryUsage: memory > 80%<br/>- DiskSpaceLow: disk_free < 10%
+        
+        alt Error rate > 5% 🚨
+            Prom->>Prom: Alert FIRING<br/>HighErrorRate
+            Prom->>Alert: POST /api/v1/alerts<br/>Alert: HighErrorRate<br/>Severity: critical<br/>Labels: {service: "auth"}
+            
+            Alert->>Alert: Group alerts<br/>(by service, severity)
+            Alert->>Alert: Apply routing rules<br/>- Critical → Slack + PagerDuty<br/>- Warning → Slack only
+            
+            Alert->>Slack: POST /webhook<br/>Message: "🚨 Auth Service<br/>Error rate: 8.5%<br/>(threshold: 5%)"
+            Slack-->>Alert: 200 OK
+            
+            Note right of Alert: 🔔 Alert sent<br/>On-call engineer<br/>notified immediately
+        end
+    end
+
+    rect rgb(255, 245, 245)
+        Note over Prom,Grafana: Phase 4: Dashboards Grafana
+        User->>Grafana: Opens dashboard<br/>"DreamScape Overview"
+        
+        Grafana->>Prom: Query: rate(http_requests_total[5m])
+        Prom-->>Grafana: Time series data
+        
+        Grafana->>Prom: Query: histogram_quantile(0.95,<br/>http_request_duration_seconds)
+        Prom-->>Grafana: P95 latency by service
+        
+        Grafana->>Prom: Query: up{job="core-pod"}
+        Prom-->>Grafana: Service uptime
+        
+        Grafana->>Grafana: Render dashboard<br/>- Request rate graph<br/>- Latency heatmap<br/>- Error rate gauge<br/>- Service status
+        
+        Grafana->>User: ✅ Display dashboard
+    end
+
+    Note over Prom,Slack: 📊 Observability Stack<br/>- Metrics: Prometheus<br/>- Logs: Loki<br/>- Traces: Jaeger (future)<br/>- Dashboards: Grafana<br/>- Alerts: Alertmanager<br/>- Notifications: Slack, PagerDuty<br/><br/>🎯 Key Metrics<br/>- Uptime: 99.95%<br/>- P95 latency: < 100ms<br/>- Error rate: < 0.5%<br/>- MTTR (Mean Time To Recovery): < 5min

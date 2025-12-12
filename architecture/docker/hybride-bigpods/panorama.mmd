@@ -1,0 +1,69 @@
+sequenceDiagram
+    autonumber
+    actor User as 👤 Utilisateur
+    participant WC as Web Client<br/>(React)
+    participant Pano as Panorama Service<br/>:3006
+    participant MinIO as MinIO S3<br/>:9000
+    participant Redis as Redis Cache<br/>:6379
+
+    rect rgb(255, 250, 240)
+        Note over User,WC: Phase 1: Navigation VR
+        User->>WC: Click "Découvrir en VR"<br/>(destination: Paris)
+        WC->>WC: Router navigate<br/>/vr/paris
+        WC->>WC: Load VRComponent<br/>(React Three Fiber)
+    end
+
+    rect rgb(240, 248, 255)
+        Note over WC,Redis: Phase 2: Demande Assets VR
+        WC->>Pano: GET /api/v1/panorama/paris/360<br/>Authorization: Bearer JWT
+        Pano->>Pano: Validate JWT<br/>(authProxy middleware)
+        
+        Pano->>Redis: Check cache<br/>key: "panorama:paris:360:urls"
+        
+        alt Cache HIT ⚡
+            Redis-->>Pano: {urls: [...], quality: "HQ"}
+            Note right of Redis: Latency: ~5ms<br/>Cache hit!
+        else Cache MISS 💾
+            Pano->>MinIO: GET /vr-assets/paris-360-hq.jpg
+            MinIO-->>Pano: Signed URL<br/>Expire: 1h
+            Pano->>Redis: Store URLs<br/>TTL: 15min
+            Note right of Redis: Cache pour<br/>futurs utilisateurs
+        end
+        
+        Pano-->>WC: 200 OK<br/>{urls: [HQ, MQ, LQ], metadata}
+    end
+
+    rect rgb(240, 255, 240)
+        Note over WC,MinIO: Phase 3: Téléchargement Progressif
+        WC->>WC: Initialize Three.js<br/>TextureLoader
+        
+        alt Connexion Rapide ⚡
+            WC->>MinIO: GET HQ image URL<br/>(via signed URL)
+            MinIO-->>WC: Stream 4K image<br/>(progressive JPEG)
+            Note right of MinIO: Progressive loading<br/>1MB → 2MB → Full
+        else Connexion Lente 📉
+            WC->>MinIO: GET MQ image URL<br/>(fallback 2K)
+            MinIO-->>WC: Stream 2K image
+            Note right of MinIO: Quality adaptative<br/>selon bande passante
+        end
+    end
+
+    rect rgb(255, 245, 245)
+        Note over WC,User: Phase 4: Rendu VR
+        WC->>WC: Apply texture<br/>to SphereGeometry
+        WC->>WC: Enable VR controls<br/>(OrbitControls, WebXR)
+        WC->>User: ✅ Affiche panorama 360°<br/>interactif
+    end
+
+    rect rgb(245, 245, 255)
+        Note over User,WC: Phase 5: Interactions
+        User->>WC: Rotate view<br/>(mouse/gyroscope)
+        WC->>WC: Update camera position
+        
+        User->>WC: Click hotspot<br/>(point d'intérêt)
+        WC->>Pano: GET /api/v1/panorama/paris/poi/1
+        Pano-->>WC: POI details<br/>(Eiffel Tower)
+        WC->>User: ✅ Affiche modal<br/>informations
+    end
+
+    Note over User,MinIO: 📊 Performance VR<br/>Initial load (HQ): ~3-5s<br/>Fallback (MQ): ~1-2s<br/>Cache hit: ~500ms<br/>Frame rate: 60 FPS<br/>Texture: 12000x6000px → 8192x4096px

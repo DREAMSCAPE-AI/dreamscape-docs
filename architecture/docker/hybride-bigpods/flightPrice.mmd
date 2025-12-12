@@ -1,0 +1,44 @@
+sequenceDiagram
+    autonumber
+    actor User
+    participant Client as Web Client
+    participant Gateway as Gateway :4000
+    participant BusinessNginx as Business NGINX :80
+    participant Voyage as Voyage Service :3003
+    participant Amadeus as Amadeus API
+    participant Redis as Redis :6379
+    participant DB as PostgreSQL
+
+    User->>Client: Price analysis NYC→LAX
+    Client->>Gateway: GET /api/flights/price-analysis?originIataCode=NYC&destinationIataCode=LAX&departureDate=2025-12-20
+    Gateway->>BusinessNginx: Proxy
+    BusinessNginx->>Voyage: /api/flights/price-analysis
+
+    Voyage->>Redis: GET price:NYC:LAX:2025-12-20
+    alt Hit
+        Redis-->>Voyage: Cached stats
+    else Miss
+        Voyage->>Amadeus: GET /analytics/itinerary-price-metrics [...]
+        Amadeus-->>Voyage: Metrics
+        Voyage->>Redis: SET price:... TTL 3600s
+    end
+
+    Voyage-->>BusinessNginx: 200 OK {metrics}
+    BusinessNginx-->>Gateway: Forward
+    Gateway-->>Client: JSON
+
+    User->>Client: Delay prediction
+    Client->>Gateway: GET /api/flights/delay-prediction?...params...
+    Gateway->>BusinessNginx: Proxy
+    BusinessNginx->>Voyage: /api/flights/delay-prediction
+    Voyage->>Amadeus: GET /travel/predictions/flight-delay
+    Amadeus-->>Voyage: {probability, factors}
+    Voyage-->>BusinessNginx: 200 OK {prediction}
+
+    User->>Client: Analytics busiest period
+    Client->>Gateway: GET /api/flights/analytics/busiest-period?cityCode=PAR&period=Y2025
+    Gateway->>BusinessNginx: Proxy
+    BusinessNginx->>Voyage: /api/flights/analytics/busiest-period
+    Voyage->>DB: Aggregations (bookings/trips)
+    DB-->>Voyage: Stats
+    Voyage-->>BusinessNginx: 200 OK {analytics}

@@ -1,0 +1,51 @@
+sequenceDiagram
+    autonumber
+    actor User
+    participant WebClient as Web Client :5173
+    participant Gateway as Gateway :4000
+    participant CoreNginx as Core NGINX :80
+    participant Auth as Auth Service :3001
+    participant Redis as Redis :6379
+    participant DB as PostgreSQL
+
+    User->>WebClient: Enter email & password<br/>Click "Login"
+    WebClient->>Gateway: POST /api/v1/auth/login<br/>{email, password, rememberMe: true}
+    
+    Gateway->>CoreNginx: Forward request
+    CoreNginx->>Auth: POST /api/v1/auth/login
+    
+    Note over Auth: Rate Limiting:<br/>10 login attempts/min<br/>(prevent brute force)
+    
+    Auth->>Redis: GET rate_limit:login:user@email.com
+    Redis-->>Auth: 3 attempts (OK)
+    
+    Auth->>DB: SELECT * FROM users<br/>WHERE email = 'user@email.com'
+    DB-->>Auth: User data + hashedPassword
+    
+    Note over Auth: Password Verification:<br/>bcrypt.compare()<br/>~200-300ms
+    
+    alt Password Valid
+        Auth->>Auth: Generate JWT tokens<br/>(access + refresh)
+        
+        Auth->>Redis: SET session:userId<br/>{refreshToken, lastActivity}<br/>TTL: 30 days (rememberMe)
+        Redis-->>Auth: OK
+        
+        Auth->>DB: UPDATE users SET last_login = NOW()<br/>WHERE id = userId
+        
+        Auth->>Redis: DEL rate_limit:login:user@email.com
+        
+        Auth-->>CoreNginx: 200 OK + Set-Cookie + tokens
+    else Password Invalid
+        Auth->>Redis: INCR rate_limit:login:user@email.com<br/>TTL: 60s
+        
+        Auth-->>CoreNginx: 401 Unauthorized<br/>{error: "Invalid credentials"}
+    end
+    
+    CoreNginx-->>Gateway: Forward response
+    Gateway-->>WebClient: Response
+    
+    WebClient->>WebClient: Store accessToken<br/>Update Redux state
+    
+    WebClient-->>User: Redirect to dashboard
+
+    Note over User,DB: **Login Time:**<br/>Success: ~400-600ms<br/>Failed: ~250ms (bcrypt only)

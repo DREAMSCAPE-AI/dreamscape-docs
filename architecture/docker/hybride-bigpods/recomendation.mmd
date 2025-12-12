@@ -1,0 +1,62 @@
+sequenceDiagram
+    autonumber
+    actor User
+    participant WebClient as Web Client<br/>(Experience Pod)
+    participant Gateway as Gateway :4000<br/>(Experience Pod)
+    participant CoreNginx as Core NGINX :80<br/>(Core Pod)
+    participant BusinessNginx as Business NGINX :80<br/>(Business Pod)
+    participant AI as AI Service :3004<br/>(Business Pod)
+    participant Amadeus as Amadeus API<br/>(External)
+    participant Redis as Redis :6379<br/>(Infrastructure)
+    participant DB as PostgreSQL<br/>(Infrastructure)
+
+    User->>WebClient: Click "Get Recommendations"<br/>for PAR, LON destinations
+    WebClient->>Gateway: GET /api/v1/recommendations<br/>?cityCodes=PAR,LON&travelerCountryCode=US
+    
+    Note over Gateway: - CORS Headers<br/>- Request Logging<br/>- Rate Limiting Check
+
+    Gateway->>CoreNginx: Forward to Core Pod :80
+    CoreNginx->>BusinessNginx: Proxy to Business Pod :80
+    
+    BusinessNginx->>AI: GET /api/v1/recommendations<br/>?cityCodes=PAR,LON&travelerCountryCode=US
+    
+    Note over AI: Validate Query Params<br/>✅ cityCodes required<br/>✅ Format validation
+
+    AI->>Redis: CHECK cache key<br/>"recommendations:PAR,LON:US"
+    
+    alt Cache Hit (Hot Path)
+        Redis-->>AI: ✅ Return cached data<br/>(TTL: 1 hour)
+        Note over AI: Cache Hit!<br/>~5ms response time
+    else Cache Miss (Cold Path)
+        Redis-->>AI: ❌ Cache miss
+        
+        AI->>DB: Query user travel history<br/>& preferences
+        Note over DB: - Past bookings<br/>- Saved destinations<br/>- Travel patterns
+        DB-->>AI: Return user profile data<br/>(travel style, budget, interests)
+        
+        AI->>Amadeus: POST /shopping/activities<br/>GET /reference-data/locations/cities<br/>(cityCodes: PAR,LON)
+        Note over Amadeus: External API Call<br/>~500-1000ms<br/>Rate limited
+        Amadeus-->>AI: Return:<br/>- City info<br/>- Activities<br/>- POIs<br/>- Weather data
+        
+        Note over AI: ML Processing:<br/>1. Collaborative Filtering<br/>2. Content-Based Filtering<br/>3. User Personalization<br/>4. Scoring Algorithm<br/>~100-200ms
+        
+        AI->>AI: Generate personalized<br/>recommendations with scores
+        
+        AI->>Redis: CACHE processed results<br/>Key: "recommendations:PAR,LON:US"<br/>TTL: 3600s (1 hour)
+        Redis-->>AI: ✅ Cached successfully
+    end
+
+    AI-->>BusinessNginx: 200 OK + JSON:<br/>{recommendations: [...],<br/>confidence: 0.89,<br/>personalized: true}
+    
+    BusinessNginx-->>CoreNginx: Forward response
+    CoreNginx-->>Gateway: Forward response
+    
+    Note over Gateway: - Add X-Response-Time<br/>- Log metrics<br/>- Add CORS headers
+
+    Gateway-->>WebClient: 200 OK + Recommendations Data
+    
+    WebClient->>WebClient: Render UI:<br/>- Display destination cards<br/>- Show confidence scores<br/>- Add "Save" buttons<br/>- Interactive map
+    
+    WebClient-->>User: Display personalized<br/>travel recommendations
+
+    Note over User,DB: **Performance Metrics:**<br/>Cache Hit: ~50-80ms<br/>Cache Miss: ~1.5-2.5s<br/>Amadeus API: ~60% of cold path time

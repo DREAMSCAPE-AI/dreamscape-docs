@@ -1,0 +1,178 @@
+sequenceDiagram
+    autonumber
+    actor User as 👤 Utilisateur
+    participant WC as Web Client
+    participant GW as Gateway<br/>:4000
+    participant NGINX as NGINX<br/>Core Pod :80
+    participant Auth as Auth Service<br/>:3001
+    participant Mongo as MongoDB<br/>:27017
+    participant Redis as Redis<br/>:6379
+
+    rect rgb(255, 250, 240)
+        Note over User,Mongo: Phase 1: Inscription (Sign Up)
+        User->>WC: Remplit formulaire<br/>(email, password, category)
+        WC->>WC: Validation frontend<br/>(format email, force pwd)
+        
+        WC->>GW: POST /api/v1/auth/register<br/>{email, password, category}
+        GW->>NGINX: Forward request
+        NGINX->>Auth: localhost:3001/register
+        
+        Auth->>Auth: Hash password<br/>(bcrypt, salt rounds: 12)
+        Note right of Auth: 🔐 Password hashing<br/>~12ms computation
+        
+        Auth->>Mongo: Check if user exists<br/>findOne({email})
+        
+        alt User Existe Déjà ⚠️
+            Mongo-->>Auth: User found
+            Auth-->>NGINX: 409 Conflict<br/>{error: "Email déjà utilisé"}
+            NGINX-->>GW: 409 Error
+            GW-->>WC: 409 Error
+            WC->>User: ❌ Message erreur
+        else User Nouveau ✅
+            Mongo-->>Auth: null (user not found)
+            Auth->>Mongo: Insert new user<br/>{email, passwordHash, category}
+            Mongo-->>Auth: User created (userId)
+            
+            Auth->>Auth: Generate JWT tokens<br/>Access: 15min<br/>Refresh: 7 jours
+            Auth->>Redis: Store refresh token<br/>key: "refresh:userId"<br/>TTL: 7 days
+            
+            Auth-->>NGINX: 201 Created<br/>{accessToken, refreshToken, user}
+            NGINX-->>GW: Forward response
+            GW-->>WC: 201 Created
+            WC->>WC: Store tokens<br/>(localStorage)
+            WC->>User: ✅ Inscription réussie
+        end
+    end
+
+    rect rgb(240, 248, 255)
+        Note over User,Redis: Phase 2: Login
+        User->>WC: Remplit formulaire login<br/>(email, password)
+        WC->>GW: POST /api/v1/auth/login<br/>{email, password}
+        GW->>NGINX: Forward request
+        NGINX->>Auth: localhost:3001/login
+        
+        Auth->>Mongo: Find user by email<br/>findOne({email})
+        
+        alt User Non Trouvé ❌
+            Mongo-->>Auth: null
+            Auth-->>NGINX: 401 Unauthorized<br/>{error: "Identifiants invalides"}
+            NGINX-->>GW: 401 Error
+            GW-->>WC: 401 Error
+            WC->>User: ❌ Erreur login
+        else User Trouvé ✅
+            Mongo-->>Auth: User found
+            Auth->>Auth: Compare passwords<br/>bcrypt.compare(input, hash)
+            
+            alt Password Incorrect ❌
+                Auth-->>NGINX: 401 Unauthorized<br/>{error: "Identifiants invalides"}
+                NGINX-->>GW: 401 Error
+                GW-->>WC: 401 Error
+                WC->>User: ❌ Erreur login
+            else Password Correct ✅
+                Auth->>Auth: Generate new JWT tokens
+                Auth->>Redis: Store refresh token<br/>key: "refresh:userId"
+                Auth->>Redis: Store session<br/>key: "session:userId"<br/>TTL: 15min
+                
+                Auth-->>NGINX: 200 OK<br/>{accessToken, refreshToken}
+                NGINX-->>GW: Forward response
+                GW-->>WC: 200 OK
+                WC->>WC: Store tokens
+                WC->>WC: Redirect to /dashboard
+                WC->>User: ✅ Login réussi
+            end
+        end
+    end
+
+    rect rgb(240, 255, 240)
+        Note over WC,Redis: Phase 3: Validation JWT (Middleware)
+        Note right of WC: Ce flux est exécuté sur<br/>CHAQUE requête API<br/>Exemple: GET /api/v1/user/profile
+        
+        WC->>GW: GET /api/v1/user/profile<br/>Authorization: Bearer JWT
+        GW->>NGINX: Forward request
+        NGINX->>Auth: Verify JWT<br/>POST /auth/verify
+        
+        Auth->>Auth: Decode JWT<br/>jwt.verify(token, JWT_SECRET)
+        
+        alt JWT Invalide/Expiré ❌
+            Auth-->>NGINX: 401 Unauthorized<br/>{error: "Token invalide"}
+            NGINX-->>GW: 401 Error
+            GW-->>WC: 401 Error
+            WC->>User: ❌ Session expirée<br/>Redirect /login
+        else JWT Valide ✅
+            Auth->>Redis: Check token blacklist<br/>SISMEMBER "blacklist" token
+            
+            alt Token Blacklisté ⛔
+                Redis-->>Auth: Token found in blacklist
+                Auth-->>NGINX: 401 Unauthorized<br/>{error: "Token révoqué"}
+                NGINX-->>GW: 401 Error
+                GW-->>WC: 401 Error
+                WC->>User: ❌ Token révoqué<br/>Redirect /login
+            else Token OK ✅
+                Redis-->>Auth: Token not in blacklist
+                Auth->>Redis: Check session<br/>GET "session:userId"
+                
+                alt Session Expirée ⌛
+                    Redis-->>Auth: null (session expired)
+                    Auth-->>NGINX: 401 Unauthorized<br/>{error: "Session expirée"}
+                    NGINX-->>GW: 401 Error
+                    GW-->>WC: 401 Error
+                    WC->>User: ❌ Session expirée<br/>Redirect /login
+                else Session Active ✅
+                    Redis-->>Auth: Session data
+                    Auth-->>NGINX: 200 OK<br/>{userId, email, category}
+                    Note right of NGINX: NGINX ajoute headers:<br/>X-User-Id: userId<br/>X-User-Email: email
+                    NGINX->>Auth: Continue to User Service<br/>(example flow)
+                    Auth->>User: ✅ Access granted<br/>to /user/profile
+                end
+            end
+        end
+    end
+
+    rect rgb(255, 245, 245)
+        Note over WC,Redis: Phase 4: Refresh Token
+        Note right of WC: Exécuté quand<br/>access token expire (15min)
+        
+        WC->>GW: POST /api/v1/auth/refresh<br/>{refreshToken}
+        GW->>NGINX: Forward request
+        NGINX->>Auth: localhost:3001/refresh
+        
+        Auth->>Redis: Verify refresh token<br/>GET "refresh:userId"
+        
+        alt Refresh Token Invalide ❌
+            Redis-->>Auth: null (token invalid/expired)
+            Auth-->>NGINX: 401 Unauthorized<br/>{error: "Refresh token invalide"}
+            NGINX-->>GW: 401 Error
+            GW-->>WC: 401 Error
+            WC->>User: ❌ Redirect /login<br/>(session expirée)
+        else Refresh Token Valide ✅
+            Redis-->>Auth: Refresh token data
+            Auth->>Auth: Generate new access token<br/>(15min)
+            Auth-->>NGINX: 200 OK<br/>{accessToken}
+            NGINX-->>GW: Forward response
+            GW-->>WC: 200 OK
+            WC->>WC: Update accessToken<br/>(localStorage)
+            WC->>User: ✅ Session refreshed<br/>(silencieux)
+        end
+    end
+
+    rect rgb(245, 245, 255)
+        Note over User,Redis: Phase 5: Logout
+        User->>WC: Click "Logout"
+        WC->>GW: POST /api/v1/auth/logout<br/>Authorization: Bearer JWT
+        GW->>NGINX: Forward request
+        NGINX->>Auth: localhost:3001/logout
+        
+        Auth->>Auth: Extract JWT payload<br/>(userId)
+        Auth->>Redis: Add token to blacklist<br/>SADD "blacklist" token<br/>EXPIRE 15min
+        Auth->>Redis: Delete session<br/>DEL "session:userId"
+        Auth->>Redis: Delete refresh token<br/>DEL "refresh:userId"
+        
+        Auth-->>NGINX: 200 OK<br/>{message: "Logout successful"}
+        NGINX-->>GW: Forward response
+        GW-->>WC: 200 OK
+        WC->>WC: Clear localStorage<br/>(remove tokens)
+        WC->>WC: Redirect to /login
+        WC->>User: ✅ Déconnexion réussie
+    end
+
+    Note over User,Redis: 📊 Métriques Authentification<br/>Sign Up: ~150-200ms<br/>Login: ~100-150ms<br/>JWT Validation: ~5-15ms (localhost!)<br/>Refresh: ~50-100ms<br/>Logout: ~30-50ms<br/><br/>🔒 Sécurité<br/>bcrypt salt rounds: 12<br/>JWT expiry: 15min (access), 7 jours (refresh)<br/>Blacklist auto-expire: 15min

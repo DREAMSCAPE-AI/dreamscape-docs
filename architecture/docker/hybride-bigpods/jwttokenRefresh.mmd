@@ -1,0 +1,119 @@
+sequenceDiagram
+    autonumber
+    actor User
+    participant WebClient as Web Client
+    participant Gateway as Gateway :4000
+    participant CoreNginx as Core NGINX :80
+    participant Auth as Auth Service :3001
+    participant Redis as Redis :6379
+
+    Note over WebClient: Access token expired (15min lifetime)<br/>Detected during API call
+
+    WebClient->>WebClient: API call failed with:<br/>401 {error: "Token expired"}
+    
+    Note over WebClient: Automatic refresh flow triggered<br/>(transparent to user)
+    
+    WebClient->>Gateway: POST /api/v1/auth/refresh<br/>Cookie: refreshToken=refresh_token_xxx
+    
+    Note over Gateway: Rate Limiting:<br/>20 refresh attempts/min per user
+    
+    Gateway->>CoreNginx: Forward to Core Pod
+    CoreNginx->>Auth: POST /api/v1/auth/refresh
+    
+    Note over Auth: Extract refresh token<br/>from HTTP-only cookie
+    
+    Auth->>Auth: refreshToken = req.cookies.refreshToken
+    
+    alt No Refresh Token
+        Auth-->>CoreNginx: 401 Unauthorized<br/>{error: "No refresh token provided"}
+        CoreNginx-->>Gateway: Forward
+        Gateway-->>WebClient: No refresh token
+        WebClient->>WebClient: Clear all tokens<br/>Redirect to /login
+        WebClient-->>User: Please login again
+        
+    else Refresh Token Present
+        Note over Auth: Verify refresh token signature
+        
+        Auth->>Auth: decoded = jwt.verify(<br/>  refreshToken,<br/>  JWT_REFRESH_SECRET<br/>)
+        
+        alt Refresh Token Invalid/Expired
+            Auth-->>CoreNginx: 401 Unauthorized<br/>{error: "Invalid or expired refresh token"}
+            CoreNginx-->>Gateway: Forward
+            Gateway-->>WebClient: Invalid refresh token
+            
+            WebClient->>WebClient: Clear tokens
+            WebClient-->>User: Redirect to /login<br/>"Your session has expired"
+            
+        else Refresh Token Valid
+            Note over Auth: Token decoded:<br/>{<br/>  userId: 123,<br/>  tokenId: "uuid-xxx",<br/>  iat: 1733400000,<br/>  exp: 1734004800<br/>}
+            
+            Auth->>Auth: Extract userId from payload
+            
+            Note over Auth: Validate session exists<br/>and refresh token matches
+            
+            Auth->>Redis: GET session:123
+            
+            alt Session Not Found
+                Auth-->>CoreNginx: 401 Unauthorized<br/>{error: "Session not found"}
+                Note over Auth: User logged out from all devices
+                
+            else Session Found
+                Redis-->>Auth: Session data:<br/>{<br/>  userId: 123,<br/>  refreshToken: "stored_refresh_token",<br/>  createdAt: "...",<br/>  lastActivity: "..."<br/>}
+                
+                Note over Auth: Compare tokens:<br/>cookie token === stored token
+                
+                alt Tokens Don't Match
+                    Note over Auth: Possible token theft!<br/>Security incident
+                    
+                    Auth->>Redis: DEL session:123<br/>(invalidate session)
+                    
+                    Auth->>Redis: SADD suspicious_activity:123<br/>"TOKEN_MISMATCH"
+                    
+                    Auth-->>CoreNginx: 401 Unauthorized<br/>{error: "Token mismatch. Please login again"}
+                    
+                    Note over Auth: Could trigger email alert<br/>to user about suspicious activity
+                    
+                else Tokens Match
+                    Note over Auth: Valid refresh request!<br/>Generate new access token
+                    
+                    Auth->>Auth: newAccessToken = jwt.sign(<br/>  {userId: 123, email: "john@example.com"},<br/>  JWT_SECRET,<br/>  {expiresIn: "15m"}<br/>)
+                    
+                    Note over Auth: Update session last activity
+                    
+                    Auth->>Redis: HSET session:123<br/>lastActivity NOW()
+                    Redis-->>Auth: ✅ Updated
+                    
+                    Note over Auth: Optional: Rotate refresh token<br/>(enhanced security - not always done)
+                    
+                    opt Refresh Token Rotation Enabled
+                        Auth->>Auth: newRefreshToken = jwt.sign(<br/>  {userId: 123, tokenId: "new-uuid"},<br/>  JWT_REFRESH_SECRET,<br/>  {expiresIn: "7d"}<br/>)
+                        
+                        Auth->>Redis: HSET session:123<br/>refreshToken newRefreshToken
+                        Redis-->>Auth: ✅ Updated
+                    end
+                    
+                    Auth-->>CoreNginx: 200 OK<br/>Set-Cookie: refreshToken=new_token (if rotated)<br/>{<br/>  success: true,<br/>  accessToken: "eyJhbGc...",<br/>  expiresIn: 900<br/>}
+                    
+                    CoreNginx-->>Gateway: Forward response
+                    Gateway-->>WebClient: New access token
+                    
+                    WebClient->>WebClient: Update tokens:<br/>- Store new accessToken in Redux<br/>- Update axios default header<br/>- Retry original failed request
+                    
+                    Note over WebClient: Retry original API call<br/>with new access token
+                    
+                    WebClient->>Gateway: Retry: GET /api/v1/users/profile<br/>Authorization: Bearer {newAccessToken}
+                    
+                    Gateway->>CoreNginx: Forward
+                    CoreNginx->>Auth: Validate new token
+                    Auth->>Redis: Check session
+                    Auth-->>CoreNginx: ✅ Valid
+                    CoreNginx-->>Gateway: Success
+                    Gateway-->>WebClient: API response
+                    
+                    WebClient-->>User: Display data<br/>(seamless experience!)
+                end
+            end
+        end
+    end
+
+    Note over User,Redis: **Refresh Token Flow Time:**<br/>Success: ~20-50ms ⚡<br/>Failed: ~10ms<br/>Total with retry: ~100-150ms<br/>(User never notices!)

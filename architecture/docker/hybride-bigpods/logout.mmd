@@ -1,0 +1,60 @@
+sequenceDiagram
+    autonumber
+    actor User
+    participant WebClient as Web Client
+    participant Gateway
+    participant CoreNginx as Core NGINX
+    participant Auth as Auth Service
+    participant Redis
+    participant DB as PostgreSQL
+
+    User->>WebClient: Click "Logout" button
+
+    WebClient->>Gateway: POST /api/v1/auth/logout\nCookie: refreshToken=refresh_token_xxx
+
+    Gateway->>CoreNginx: Forward to Core Pod
+    CoreNginx->>Auth: POST /api/v1/auth/logout
+
+    Note over Auth: Extract refresh token\nfrom cookie
+
+    Auth->>Auth: refreshToken = req.cookies.refreshToken
+
+    alt No Refresh Token
+        Note over Auth: Already logged out\nor token missing
+        Auth-->>CoreNginx: 200 OK\n{ message: "Already logged out" }
+
+    else Refresh Token Present
+        Note over Auth: Decode token to get userId
+        Auth->>Auth: decoded = jwt.verify(\n  refreshToken,\n  JWT_REFRESH_SECRET\n)
+
+        alt Token Invalid
+            Note over Auth: Token expired or invalid\nClean up anyway
+            Auth-->>CoreNginx: 200 OK\n{ message: "Logged out" }
+
+        else Token Valid
+            Auth->>Auth: Extract userId = 123
+
+            Note over Auth: Remove session from Redis
+            Auth->>Redis: DEL session:123
+            Redis-->>Auth: Session deleted
+
+            Note over Auth: Add token to blacklist\n(prevent reuse)
+            Auth->>Redis: SADD token_blacklist:123\nrefreshToken\nTTL until expiration
+            Redis-->>Auth: Blacklisted
+
+            Note over Auth: Log logout event
+            Auth->>DB: INSERT INTO audit_logs\n(user_id, action, timestamp)\nVALUES (123, 'USER_LOGOUT', NOW())
+            DB-->>Auth: Logged
+
+            Auth-->>CoreNginx: 200 OK\n{ message: "Logged out succesfully"}
+        end
+    end
+
+    CoreNginx-->>Gateway: Forward response
+    Gateway-->>WebClient: Logout confirmed
+
+    WebClient->>WebClient: Clean up client state:\n- Clear accessToken\n- Clear refreshToken cookie\n- Clear user data\n- Reset axios headers\n- Clear localStorage/sessionStorage
+
+    WebClient-->>User: Redirect to /\nShow "You have been logged out"
+
+    Note over User,DB: Logout Time:\n~30–50ms\n(Redis delete + cookie clear)

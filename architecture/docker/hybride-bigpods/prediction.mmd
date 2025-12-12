@@ -1,0 +1,73 @@
+sequenceDiagram
+    autonumber
+    actor User
+    participant WebClient as Web Client<br/>(Experience Pod)
+    participant Gateway as Gateway :4000<br/>(Experience Pod)
+    participant CoreNginx as Core NGINX :80<br/>(Core Pod)
+    participant BusinessNginx as Business NGINX :80<br/>(Business Pod)
+    participant AI as AI Service :3004<br/>(Business Pod)
+    participant Amadeus as Amadeus API<br/>(External)
+    participant Redis as Redis :6379<br/>(Infrastructure)
+    participant DB as PostgreSQL<br/>(Infrastructure)
+
+    User->>WebClient: Search flight<br/>NYC → LAX<br/>Departure: Dec 20, 2025
+    
+    Note over WebClient: Automatic trip<br/>purpose detection<br/>for better recommendations
+
+    WebClient->>Gateway: GET /api/v1/predictions/trip-purpose<br/>?originLocationCode=NYC<br/>&destinationLocationCode=LAX<br/>&departureDate=2025-12-20<br/>&searchDate=2025-12-05
+    
+    Note over Gateway: - Validate JWT token<br/>- Rate limiting<br/>- Request logging
+
+    Gateway->>CoreNginx: Forward to Core Pod :80
+    CoreNginx->>BusinessNginx: Proxy to Business Pod :80
+    
+    BusinessNginx->>AI: GET /api/v1/predictions/trip-purpose<br/>(with all query params)
+    
+    Note over AI: Validate Required Params:<br/>✅ originLocationCode<br/>✅ destinationLocationCode<br/>✅ departureDate<br/>✅ searchDate
+
+    AI->>Redis: CHECK cache key<br/>"trip-purpose:NYC:LAX:2025-12-20:2025-12-05"
+    
+    alt Cache Hit
+        Redis-->>AI: ✅ Return cached prediction<br/>(TTL: 6 hours)
+        Note over AI: Instant response<br/>~5ms
+    else Cache Miss
+        Redis-->>AI: ❌ Cache miss
+        
+        AI->>DB: Query user booking history<br/>for NYC → LAX route
+        Note over DB: - Past trips<br/>- Booking patterns<br/>- Stay duration<br/>- Seasonality
+        DB-->>AI: Historical data:<br/>3 past BUSINESS trips<br/>1 LEISURE trip
+        
+        AI->>Amadeus: POST /shopping/flight-offers<br/>GET /travel/predictions/trip-purpose
+        Note over Amadeus: Send trip params:<br/>- Route info<br/>- Dates<br/>- Search timing<br/>~300-800ms
+        Amadeus-->>AI: Amadeus ML prediction:<br/>{<br/>  "prediction": "BUSINESS",<br/>  "probability": 0.72<br/>}
+        
+        Note over AI: **Feature Engineering:**<br/>1. Days advance (15 days)<br/>2. Stay duration<br/>3. Day of week (Friday)<br/>4. Route popularity<br/>5. Historical patterns<br/>6. Seasonal trends
+        
+        Note over AI: **ML Model (TensorFlow):**<br/>- Input: 15 features<br/>- Model: Random Forest<br/>- Output: [BUSINESS, LEISURE]<br/>- Inference: ~50-100ms
+        
+        AI->>AI: Ensemble prediction:<br/>- Amadeus: 72% BUSINESS<br/>- User history: 75% BUSINESS<br/>- ML Model: 68% BUSINESS<br/>→ Final: 71.6% BUSINESS
+        
+        AI->>Redis: CACHE prediction result<br/>TTL: 21600s (6 hours)
+        Redis-->>AI: ✅ Cached
+    end
+
+    AI-->>BusinessNginx: 200 OK + JSON:<br/>{<br/>  "result": "BUSINESS",<br/>  "probability": 0.716,<br/>  "subType": "MEETING",<br/>  "confidence": "HIGH"<br/>}
+    
+    BusinessNginx-->>CoreNginx: Forward response
+    CoreNginx-->>Gateway: Forward response
+    
+    Note over Gateway: - Add prediction to logs<br/>- Track accuracy metrics
+
+    Gateway-->>WebClient: 200 OK + Trip Purpose Data
+    
+    WebClient->>WebClient: Adjust UI based on purpose:<br/>✅ BUSINESS → Show:<br/>  - Flexible tickets<br/>  - Lounge access<br/>  - Extra baggage<br/>  - Hotels near convention centers
+    
+    WebClient-->>User: Display optimized results<br/>for BUSINESS trip
+
+    Note over User,DB: **Performance:**<br/>Cache Hit: ~60-90ms<br/>Cache Miss: ~1.2-2.0s<br/>ML Inference: ~100ms
+
+    rect rgb(240, 248, 255)
+        Note over AI,DB: **Prediction Accuracy Tracking**
+        AI->>DB: Store prediction for later validation<br/>(compare with actual booking)
+        Note over DB: Used to retrain ML model<br/>monthly
+    end

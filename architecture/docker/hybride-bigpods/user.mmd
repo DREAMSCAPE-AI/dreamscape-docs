@@ -1,0 +1,73 @@
+sequenceDiagram
+    autonumber
+    actor User
+    participant WebClient as Web Client
+    participant Gateway as Gateway :4000
+    participant CoreNginx as Core NGINX :80
+    participant UserService as User Service :3002
+    participant Auth as Auth Service :3001<br/>(JWT Validation)
+    participant Redis as Redis :6379
+    participant DB as PostgreSQL
+
+    User->>WebClient: Navigate to "My Profile"
+    
+    WebClient->>Gateway: GET /api/v1/users/profile<br/>Authorization: Bearer {accessToken}
+    
+    Gateway->>CoreNginx: Forward to Core Pod
+    CoreNginx->>UserService: GET /api/v1/users/profile
+    
+    Note over UserService: Extract JWT from<br/>Authorization header
+    
+    UserService->>Auth: authenticateToken(token)<br/>(middleware call)
+    
+    Note over Auth: JWT Verification:<br/>1. Decode token<br/>2. Verify signature<br/>3. Check expiration<br/>~5ms
+    
+    Auth->>Redis: GET session:userId<br/>(validate active session)
+    Redis-->>Auth: Session data found
+    
+    Auth-->>UserService: ✅ Token valid<br/>{userId: 123, email: "john@example.com"}
+    
+    Note over UserService: User authenticated!<br/>Proceed with profile fetch
+    
+    UserService->>Redis: GET profile_cache:123
+    
+    alt Cache Hit (Hot Path)
+        Redis-->>UserService: ✅ Cached profile data<br/>(TTL: 5 min)
+        Note over UserService: Ultra-fast!<br/>~5ms response ⚡
+        
+    else Cache Miss (Cold Path)
+        Redis-->>UserService: ❌ Cache miss
+        
+        par Fetch All Profile Data
+            UserService->>DB: SELECT * FROM profiles<br/>WHERE user_id = 123
+            DB-->>UserService: Profile data:<br/>{name, email, photo, bio}
+            
+            UserService->>DB: SELECT * FROM user_preferences<br/>WHERE user_id = 123
+            DB-->>UserService: Preferences:<br/>{language: 'en', currency: 'USD', timezone: 'UTC'}
+            
+            UserService->>DB: SELECT * FROM notification_settings<br/>WHERE user_id = 123
+            DB-->>UserService: Notifications:<br/>{dealAlerts: true, tripReminders: true}
+            
+            UserService->>DB: SELECT * FROM privacy_settings<br/>WHERE user_id = 123
+            DB-->>UserService: Privacy:<br/>{profileVisibility: 'PUBLIC', dataSharing: false}
+            
+            UserService->>DB: SELECT * FROM travel_preferences<br/>WHERE user_id = 123
+            DB-->>UserService: Travel prefs:<br/>{preferredDestinations: [...], accommodationType: 'HOTEL'}
+        end
+        
+        Note over UserService: Merge all data into<br/>single profile object
+        
+        UserService->>Redis: SET profile_cache:123<br/>{merged_profile_data}<br/>TTL: 300s (5 min)
+        Redis-->>UserService: ✅ Cached
+    end
+    
+    UserService-->>CoreNginx: 200 OK + JSON:<br/>{<br/>  profile: {name, email, photo},<br/>  preferences: {...},<br/>  notifications: {...},<br/>  privacy: {...},<br/>  travel: {...}<br/>}
+    
+    CoreNginx-->>Gateway: Forward response
+    Gateway-->>WebClient: Profile data
+    
+    WebClient->>WebClient: Render profile page:<br/>- Display user info<br/>- Show settings tabs<br/>- Enable edit mode
+    
+    WebClient-->>User: Display complete profile
+
+    Note over User,DB: **Performance:**<br/>Cache Hit: ~15-25ms ⚡<br/>Cache Miss: ~150-200ms<br/>(5 parallel DB queries)
