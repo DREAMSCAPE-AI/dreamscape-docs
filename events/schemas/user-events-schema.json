@@ -1,0 +1,304 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://dreamscape.io/schemas/user-events/v1.0",
+  "title": "DreamScape User Events Schema",
+  "description": "JSON Schema for user-related Kafka events in the DreamScape platform",
+  "definitions": {
+    "BaseEvent": {
+      "type": "object",
+      "required": ["eventId", "eventType", "timestamp", "version", "source", "payload"],
+      "properties": {
+        "eventId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Unique event identifier"
+        },
+        "eventType": {
+          "type": "string",
+          "description": "Type of the event"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp when the event occurred"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+$",
+          "description": "Event schema version"
+        },
+        "source": {
+          "type": "string",
+          "description": "Source service that published the event"
+        },
+        "correlationId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Optional correlation ID for distributed tracing"
+        },
+        "causationId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Optional ID of the event that caused this event"
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Optional additional metadata"
+        },
+        "payload": {
+          "type": "object",
+          "description": "Event-specific payload"
+        }
+      }
+    },
+    "UserCreatedPayload": {
+      "type": "object",
+      "required": ["userId", "email", "createdAt"],
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Unique user identifier"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "User email address"
+        },
+        "firstName": {
+          "type": "string",
+          "description": "User first name"
+        },
+        "lastName": {
+          "type": "string",
+          "description": "User last name"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when user was created"
+        }
+      }
+    },
+    "UserUpdatedPayload": {
+      "type": "object",
+      "required": ["userId", "changes", "updatedAt"],
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Unique user identifier"
+        },
+        "changes": {
+          "type": "object",
+          "description": "Map of changed fields",
+          "patternProperties": {
+            ".*": {
+              "type": "object",
+              "required": ["old", "new"],
+              "properties": {
+                "old": {
+                  "description": "Previous value"
+                },
+                "new": {
+                  "description": "New value"
+                }
+              }
+            }
+          }
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when user was updated"
+        }
+      }
+    },
+    "UserProfileUpdatedPayload": {
+      "type": "object",
+      "required": ["userId", "profile", "updatedAt"],
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Unique user identifier"
+        },
+        "profile": {
+          "type": "object",
+          "properties": {
+            "firstName": {
+              "type": "string",
+              "description": "User first name"
+            },
+            "lastName": {
+              "type": "string",
+              "description": "User last name"
+            },
+            "phone": {
+              "type": "string",
+              "pattern": "^\\+?[1-9]\\d{1,14}$",
+              "description": "Phone number in E.164 format"
+            },
+            "avatar": {
+              "type": "string",
+              "description": "Avatar URL"
+            },
+            "dateOfBirth": {
+              "type": "string",
+              "format": "date",
+              "description": "Date of birth (ISO 8601 date)"
+            },
+            "nationality": {
+              "type": "string",
+              "pattern": "^[A-Z]{2}$",
+              "description": "Nationality (ISO 3166-1 alpha-2 country code)"
+            }
+          }
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when profile was updated"
+        }
+      }
+    },
+    "UserPreferencesUpdatedPayload": {
+      "type": "object",
+      "required": ["userId", "preferences", "updatedAt"],
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Unique user identifier"
+        },
+        "preferences": {
+          "type": "object",
+          "properties": {
+            "language": {
+              "type": "string",
+              "pattern": "^[a-z]{2}$",
+              "description": "Language code (ISO 639-1)"
+            },
+            "currency": {
+              "type": "string",
+              "pattern": "^[A-Z]{3}$",
+              "description": "Currency code (ISO 4217)"
+            },
+            "notifications": {
+              "type": "object",
+              "properties": {
+                "email": {
+                  "type": "boolean",
+                  "description": "Email notifications enabled"
+                },
+                "sms": {
+                  "type": "boolean",
+                  "description": "SMS notifications enabled"
+                },
+                "push": {
+                  "type": "boolean",
+                  "description": "Push notifications enabled"
+                }
+              }
+            },
+            "travelPreferences": {
+              "type": "object",
+              "properties": {
+                "seatPreference": {
+                  "type": "string",
+                  "enum": ["window", "aisle", "middle", "no-preference"],
+                  "description": "Preferred seat type"
+                },
+                "mealPreference": {
+                  "type": "string",
+                  "enum": ["standard", "vegetarian", "vegan", "halal", "kosher", "gluten-free", "no-preference"],
+                  "description": "Meal preference"
+                },
+                "classPreference": {
+                  "type": "string",
+                  "enum": ["economy", "premium-economy", "business", "first", "no-preference"],
+                  "description": "Travel class preference"
+                }
+              }
+            }
+          }
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when preferences were updated"
+        }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "title": "User Created Event",
+      "allOf": [
+        {
+          "$ref": "#/definitions/BaseEvent"
+        },
+        {
+          "properties": {
+            "eventType": {
+              "const": "user.created"
+            },
+            "payload": {
+              "$ref": "#/definitions/UserCreatedPayload"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "title": "User Updated Event",
+      "allOf": [
+        {
+          "$ref": "#/definitions/BaseEvent"
+        },
+        {
+          "properties": {
+            "eventType": {
+              "const": "user.updated"
+            },
+            "payload": {
+              "$ref": "#/definitions/UserUpdatedPayload"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "title": "User Profile Updated Event",
+      "allOf": [
+        {
+          "$ref": "#/definitions/BaseEvent"
+        },
+        {
+          "properties": {
+            "eventType": {
+              "const": "user.profile.updated"
+            },
+            "payload": {
+              "$ref": "#/definitions/UserProfileUpdatedPayload"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "title": "User Preferences Updated Event",
+      "allOf": [
+        {
+          "$ref": "#/definitions/BaseEvent"
+        },
+        {
+          "properties": {
+            "eventType": {
+              "const": "user.preferences.updated"
+            },
+            "payload": {
+              "$ref": "#/definitions/UserPreferencesUpdatedPayload"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
