@@ -258,7 +258,19 @@ DreamScape utilise une **architecture hybride** qui combine :
 
     **Flux d'authentification :**
     ![Auth](auth.png)
-    **Sécurité :**
+
+    **Flux de logout**
+    ![logout](logout.png)
+
+    **Flux de login**
+    ![login](login.png)
+
+    **Flux JWT Token Validation**
+    ![jwtTokenValidation](jwtTokenValidation.png)
+
+    **Flux JWT Token Refresh**
+    ![jwtTokenRefresh](jwtTokenRefresh.png)
+
 
      Passwords: bcrypt (salt rounds: 12)
      JWT expiration: 15min (access), 7 jours (refresh)
@@ -306,6 +318,25 @@ DreamScape utilise une **architecture hybride** qui combine :
     |-------|-----------|------------|
     GET	| /health	| Health check endpoint
 
+    **Flux User**
+    ![user](user.png)
+
+    **Flux Delete User**
+    ![userDelete](userDelete.png)
+
+    **Flux Update User**
+    ![userUpload](userUpdate.png)
+
+    **Flux Update Avatar User**
+    ![userUploadAvatar](userUploadAvatar.png)
+
+    **Flux User Activities**
+    ![userActivities](userActivities.png)
+&nbsp;
+    **Flux User activities Details**
+    ![userActivities](userActivitiesDetails.png)
+  
+&nbsp;
 
 **Métriques Core Pod**
 | Métrique | Valeur Cible | Réel (Dev) |
@@ -431,9 +462,17 @@ DreamScape utilise une **architecture hybride** qui combine :
 
     **Intégration Amadeus :**
 
-    **Flux de réservation :**
+    **Flux de recherche de vols :**
+    ![flightShearch](./flightSearch.png)
 
-    ![orderVoyage](./orderVoyage.png)
+    **Flux de reservation de vols**
+    ![flightOrder](./flightOrder.png)
+
+    **Flux de recherche d'hotels**
+    ![hotelShearch](./hotelSearch.png)
+
+    **Flux de location**
+    ![location](locationSearch.png)
 
     **Connexions :**
 &nbsp;
@@ -453,30 +492,36 @@ DreamScape utilise une **architecture hybride** qui combine :
 
     **API Endpoints :** http:/localhost:3004/
 
-AI Service - Complete Route List
-Recommendations Routes
-Base: /api/v1/recommendations
+    AI Service - Complete Route List
+    Recommendations Routes
+    Base: /api/v1/recommendations
 
-|Method	| Endpoint	| Description	| Auth Required	| Required Parameters| 
-|-------|-----------|---------------|---------------|--------------------|
-GET	| /	| Get travel recommendations	| ❌ No	| cityCodes
+    |Method	| Endpoint	| Description	| Auth Required	| Required Parameters| 
+    |-------|-----------|---------------|---------------|--------------------|
+    GET	| /	| Get travel recommendations	| ❌ No	| cityCodes
 
-Optional Parameters:
-travelerCountryCode - Country code of the traveler
-destinationCountryCode - Country code of the destination
+    Optional Parameters:
+    travelerCountryCode - Country code of the traveler
+    destinationCountryCode - Country code of the destination
 
-Predictions Routes
-Base: /api/v1/predictions
+    Predictions Routes
+    Base: /api/v1/predictions
 
-|Method	| Endpoint	| Description	| Auth Required	| Required Parameters| 
-|-------|-----------|---------------|---------------|--------------------|
-GET	| /trip-purpose	| Predict trip purpose	| ❌ No	| originLocationCode, destinationLocationCode, departureDate, searchDate,returnDate(optional)
+    |Method	| Endpoint	| Description	| Auth Required	| Required Parameters| 
+    |-------|-----------|---------------|---------------|--------------------|
+    GET	| /trip-purpose	| Predict trip purpose	| ❌ No	| originLocationCode, destinationLocationCode, departureDate, searchDate,returnDate(optional)
 
 
-Health Route
-|Method	| Endpoint	| Description|
-|-------|-----------|------------|
-GET	| /health	| Health check endpoint
+    Health Route
+    |Method	| Endpoint	| Description|
+    |-------|-----------|------------|
+    GET	| /health	| Health check endpoint
+
+    **Flux de recommendation**
+    ![recommendation](./recomendation.png)
+
+    **Flux de prediction**
+    ![prediction](./prediction.png)
 
 &nbsp;
 
@@ -496,6 +541,7 @@ GET	| /health	| Health check endpoint
     **API Endpoints :** http://localhost:3005/
 
     **Flux de paiement :**
+    A venir non défini
     ![Paiment](payment.png)
 
     **Sécurité :**

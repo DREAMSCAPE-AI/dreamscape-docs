@@ -1,0 +1,28 @@
+sequenceDiagram
+    autonumber
+    actor User
+    participant Client as Web Client
+    participant Gateway as Gateway :4000
+    participant BusinessNginx as Business NGINX :80
+    participant Voyage as Voyage Service :3003
+    participant Amadeus as Amadeus API
+    participant Redis as Redis :6379
+
+    User->>Client: Search locations "Par"
+    Client->>Gateway: GET /api/locations/search?keyword=Par
+    Gateway->>BusinessNginx: Proxy
+    BusinessNginx->>Voyage: /api/locations/search
+
+    Voyage->>Redis: GET loc:search:Par
+    alt Hit
+        Redis-->>Voyage: Cached
+    else Miss
+        Voyage->>Amadeus: GET /reference-data/locations?keyword=Par
+        Amadeus-->>Voyage: Locations
+        Voyage->>Redis: SET loc:search:Par TTL 300s
+        Redis-->>Voyage: OK
+    end
+
+    Voyage-->>BusinessNginx: 200 OK [locations]
+    BusinessNginx-->>Gateway: Forward
+    Gateway-->>Client: JSON

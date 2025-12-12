@@ -1,0 +1,52 @@
+sequenceDiagram
+    autonumber
+    actor User
+    participant WebClient as Web Client
+    participant Gateway as Gateway :4000
+    participant CoreNginx as Core NGINX :80
+    participant UserService as User Service :3002
+    participant FileSystem as Local FileSystem<br/>(uploads/avatars/)
+    participant Redis as Redis :6379
+    participant DB as PostgreSQL
+
+    User->>WebClient: Click "Upload Avatar"<br/>Select image file (avatar.jpg)
+    
+    Note over WebClient: Client-side validation:<br/>✅ File size < 2MB<br/>✅ Format: jpg, png, gif<br/>✅ Image dimensions OK
+    
+    WebClient->>Gateway: POST /api/v1/users/profile/:userId/avatar<br/>Content-Type: multipart/form-data<br/>File: avatar.jpg (1.5MB)
+    
+    Gateway->>CoreNginx: Forward multipart request
+    CoreNginx->>UserService: POST /api/v1/users/profile/:userId/avatar
+    
+    Note over UserService: Multer middleware:<br/>- diskStorage configuration<br/>- fileFilter (jpeg/jpg/png/gif)<br/>- limits: 2MB max
+    
+    UserService->>UserService: Validate file:<br/>✅ File exists<br/>✅ Size <= 2MB<br/>✅ MIME type allowed
+    
+    Note over UserService: Generate unique filename:<br/>"avatar-1733400000000-123456789.jpg"
+    
+    UserService->>FileSystem: SAVE file to<br/>/uploads/avatars/avatar-1733400000000-123456789.jpg
+    FileSystem-->>UserService: ✅ File saved successfully
+    
+    Note over UserService: Generate public URL
+    
+    UserService->>DB: UPDATE profiles<br/>SET photo_url = '/uploads/avatars/avatar-1733400000000-123456789.jpg',<br/>    updated_at = NOW()<br/>WHERE user_id = 123
+    
+    DB-->>UserService: ✅ Profile updated
+    
+    UserService->>Redis: DEL profile_cache:123<br/>(invalidate old profile with old avatar)
+    Redis-->>UserService: ✅ Cache cleared
+    
+    UserService-->>CoreNginx: 200 OK<br/>{<br/>  success: true,<br/>  avatarUrl: "/uploads/avatars/avatar-1733400000000-123456789.jpg",<br/>  message: "Avatar uploaded successfully"<br/>}
+    
+    CoreNginx-->>Gateway: Forward response
+    Gateway-->>WebClient: Avatar URL
+    
+    WebClient->>WebClient: Update avatar image:<br/><img src="http://localhost:3002/uploads/avatars/..."/>
+    
+    WebClient-->>User: Show new avatar<br/>in profile page
+
+    Note over User,DB: **Upload Time:**<br/>Small file (< 500KB): ~100-200ms<br/>Large file (1-2MB): ~300-500ms<br/>Includes: upload + save + DB update
+
+    rect rgb(255, 240, 240)
+        Note over FileSystem: **Storage Consideration:**<br/>Dev: Local disk (/uploads/avatars/)<br/>Prod: S3/MinIO recommended<br/>CDN: CloudFront for fast delivery
+    end

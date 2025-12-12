@@ -1,0 +1,29 @@
+sequenceDiagram
+    autonumber
+    actor User
+    participant Client as Web Client
+    participant Gateway as Gateway :4000
+    participant BusinessNginx as Business NGINX :80
+    participant Voyage as Voyage Service :3003
+    participant Amadeus as Amadeus API
+    participant Redis as Redis :6379
+
+    User->>Client: Airline lookup "BA"
+    Client->>Gateway: GET /api/airlines/lookup?airlineCodes=BA
+    Gateway->>BusinessNginx: Proxy
+    BusinessNginx->>Voyage: /api/airlines/lookup
+
+    Voyage->>Redis: GET airlines:lookup:BA
+    alt Hit
+        Redis-->>Voyage: Cached airline info
+    else Miss
+        Redis-->>Voyage: MISS
+        Voyage->>Amadeus: GET /reference-data/airlines?airlineCodes=BA
+        Amadeus-->>Voyage: Airline data
+        Voyage->>Redis: SET airlines:lookup:BA TTL 3600s
+        Redis-->>Voyage: OK
+    end
+
+    Voyage-->>BusinessNginx: 200 OK {airlines}
+    BusinessNginx-->>Gateway: Forward
+    Gateway-->>Client: JSON

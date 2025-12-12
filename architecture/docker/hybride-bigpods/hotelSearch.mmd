@@ -1,0 +1,29 @@
+sequenceDiagram
+    autonumber
+    actor User
+    participant Client as Web Client
+    participant Gateway as Gateway :4000
+    participant BusinessNginx as Business NGINX :80
+    participant Voyage as Voyage Service :3003
+    participant Amadeus as Amadeus API
+    participant Redis as Redis :6379
+
+    User->>Client: Search hotels in PAR (Dec 20-22)
+    Client->>Gateway: GET /api/hotels/search?cityCode=PAR&checkInDate=2025-12-20&checkOutDate=2025-12-22
+    Gateway->>BusinessNginx: Proxy
+    BusinessNginx->>Voyage: /api/hotels/search (middleware/hotelCache.ts)
+
+    Voyage->>Redis: GET hotel:search:PAR:2025-12-20:2025-12-22
+    alt Cache Hit
+        Redis-->>Voyage: Cached hotel list
+    else Cache Miss
+        Redis-->>Voyage: MISS
+        Voyage->>Amadeus: GET /shopping/hotel-offers [...params...]
+        Amadeus-->>Voyage: Hotel offers
+        Voyage->>Redis: SET hotel:search:... TTL 300s
+        Redis-->>Voyage: OK
+    end
+
+    Voyage-->>BusinessNginx: 200 OK [hotels]
+    BusinessNginx-->>Gateway: Forward
+    Gateway-->>Client: JSON hotels

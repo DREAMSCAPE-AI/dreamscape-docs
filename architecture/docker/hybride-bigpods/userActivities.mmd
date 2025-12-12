@@ -1,0 +1,52 @@
+sequenceDiagram
+    autonumber
+    actor User
+    participant WebClient as Web Client
+    participant Gateway as Gateway :4000
+    participant CoreNginx as Core NGINX :80
+    participant UserService as User Service :3002
+    participant Amadeus as Amadeus API<br/>(External)
+    participant Redis as Redis :6379
+
+    Note over UserService: ⚠️ Currently Disabled<br/>AmadeusService import issue
+
+    User->>WebClient: Search activities in Paris<br/>(latitude: 48.8566, longitude: 2.3522)
+    
+    WebClient->>Gateway: GET /api/v1/activities/search<br/>?latitude=48.8566&longitude=2.3522&radius=5
+    
+    Gateway->>CoreNginx: Forward to Core Pod
+    CoreNginx->>UserService: GET /api/v1/activities/search
+    
+    Note over UserService: Validate coordinates:<br/>✅ Latitude: -90 to 90<br/>✅ Longitude: -180 to 180<br/>✅ Radius: optional (default: 1km)
+    
+    UserService->>Redis: GET activities_cache:48.8566:2.3522:5
+    
+    alt Cache Hit
+        Redis-->>UserService: ✅ Cached activities<br/>(TTL: 1 hour)
+        
+    else Cache Miss
+        Redis-->>UserService: ❌ Cache miss
+        
+        UserService->>Amadeus: GET /shopping/activities<br/>?latitude=48.8566<br/>&longitude=2.3522<br/>&radius=5
+        
+        Note over Amadeus: External API call<br/>~500-1000ms
+        
+        Amadeus-->>UserService: Activities data:<br/>[<br/>  {name: "Eiffel Tower", price: "25 EUR"},<br/>  {name: "Louvre Museum", price: "17 EUR"},<br/>  ...<br/>]
+        
+        UserService->>Redis: SET activities_cache:48.8566:2.3522:5<br/>TTL: 3600s (1 hour)
+        Redis-->>UserService: ✅ Cached
+    end
+    
+    UserService-->>CoreNginx: 200 OK + Activities JSON
+    CoreNginx-->>Gateway: Forward response
+    Gateway-->>WebClient: Activities list
+    
+    WebClient->>WebClient: Render activity cards:<br/>- Display on map<br/>- Show prices<br/>- Add "Book" buttons
+    
+    WebClient-->>User: Display activities near Paris
+
+    Note over User,Amadeus: **Performance:**<br/>Cache hit: ~50ms<br/>Cache miss: ~1-1.5s (Amadeus API)
+
+    rect rgb(255, 240, 220)
+        Note over UserService: **TODO: Fix AmadeusService Import**<br/>Current error: Cannot find module '@/services/AmadeusService'<br/>Solution: Move AmadeusService to shared library or fix import path
+    end

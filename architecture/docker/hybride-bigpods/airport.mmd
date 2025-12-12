@@ -1,0 +1,28 @@
+sequenceDiagram
+    autonumber
+    actor User
+    participant Client as Web Client
+    participant Gateway as Gateway :4000
+    participant BusinessNginx as Business NGINX :80
+    participant Voyage as Voyage Service :3003
+    participant Amadeus as Amadeus API
+    participant Redis as Redis :6379
+
+    User->>Client: Nearest airport (lat/lon)
+    Client->>Gateway: GET /api/airports/nearest?latitude=48.85&longitude=2.35
+    Gateway->>BusinessNginx: Proxy
+    BusinessNginx->>Voyage: /api/airports/nearest
+
+    Voyage->>Redis: GET airports:nearest:48.85:2.35
+    alt Hit
+        Redis-->>Voyage: Cached
+    else Miss
+        Voyage->>Amadeus: GET /reference-data/locations/airports?latitude=...&longitude=...
+        Amadeus-->>Voyage: Airports list
+        Voyage->>Redis: SET airports:nearest:... TTL 900s
+        Redis-->>Voyage: OK
+    end
+
+    Voyage-->>BusinessNginx: 200 OK [airports]
+    BusinessNginx-->>Gateway: Forward
+    Gateway-->>Client: JSON

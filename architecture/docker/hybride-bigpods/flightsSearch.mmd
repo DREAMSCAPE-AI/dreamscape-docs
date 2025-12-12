@@ -1,0 +1,31 @@
+sequenceDiagram
+    autonumber
+    actor User
+    participant Client as Web Client
+    participant Gateway as Gateway :4000
+    participant BusinessNginx as Business NGINX :80
+    participant Voyage as Voyage Service :3003
+    participant Amadeus as Amadeus API
+    participant Redis as Redis :6379
+
+    User->>Client: Search flights NYC→LAX, 2025-12-20
+    Client->>Gateway: GET /api/flights/search?originLocationCode=NYC&destinationLocationCode=LAX&departureDate=2025-12-20
+    Gateway->>BusinessNginx: Proxy
+    BusinessNginx->>Voyage: /api/flights/search
+
+    Voyage->>Voyage: Validate params + build cacheKey
+    Voyage->>Redis: GET flight:search:NYC:LAX:2025-12-20
+    alt Cache Hit
+        Redis-->>Voyage: Cached offers (mapped DTOs)
+    else Cache Miss
+        Redis-->>Voyage: MISS
+        Voyage->>Amadeus: GET /shopping/flight-offers [...params...]
+        Amadeus-->>Voyage: Raw flight offers
+        Voyage->>Voyage: Map -> FlightOfferDTO (mappers/FlightOfferMapper.ts)
+        Voyage->>Redis: SET flight:search:... TTL 1800s
+        Redis-->>Voyage: OK
+    end
+
+    Voyage-->>BusinessNginx: 200 OK [FlightOfferDTO[]]
+    BusinessNginx-->>Gateway: Forward
+    Gateway-->>Client: Offers JSON

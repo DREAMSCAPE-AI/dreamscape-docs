@@ -1,0 +1,31 @@
+sequenceDiagram
+    autonumber
+    actor User
+    participant Client as Web Client
+    participant Gateway as Gateway :4000
+    participant BusinessNginx as Business NGINX :80
+    participant Voyage as Voyage Service :3003
+    participant Amadeus as Amadeus API
+    participant DB as PostgreSQL
+
+    User->>Client: Search transfer (airport→hotel)
+    Client->>Gateway: GET /api/transfers/search?startDateTime=...&passengers=2
+    Gateway->>BusinessNginx: Proxy
+    BusinessNginx->>Voyage: /api/transfers/search
+
+    Voyage->>Amadeus: GET /transport/securities/transfers [...params...]
+    Amadeus-->>Voyage: Options
+    Voyage-->>BusinessNginx: 200 OK [transfers]
+    BusinessNginx-->>Gateway: Forward
+    Gateway-->>Client: JSON
+
+    User->>Client: Book transfer
+    Client->>Gateway: POST /api/transfers/bookings {selection}
+    Gateway->>BusinessNginx: Proxy
+    BusinessNginx->>Voyage: /api/transfers/bookings
+
+    Voyage->>Amadeus: POST /ordering/transfer-orders
+    Amadeus-->>Voyage: {orderId, status}
+    Voyage->>DB: INSERT transfer_orders
+    DB-->>Voyage: Saved
+    Voyage-->>BusinessNginx: 201 Created {orderId}

@@ -1,0 +1,29 @@
+sequenceDiagram
+    autonumber
+    actor User
+    participant Client as Web Client
+    participant Gateway as Gateway :4000
+    participant BusinessNginx as Business NGINX :80
+    participant Voyage as Voyage Service :3003
+    participant Amadeus as Amadeus API
+    participant DB as PostgreSQL
+    participant Kafka as Kafka
+
+    User->>Client: Confirm booking
+    Client->>Gateway: POST /api/flights/orders {flightOffer, travelers}
+    Gateway->>BusinessNginx: Proxy
+    BusinessNginx->>Voyage: /api/flights/orders
+
+    Voyage->>Voyage: Validate body + auth proxy (middleware/authProxy.ts)
+    Voyage->>Amadeus: POST /booking/flight-orders
+    Amadeus-->>Voyage: {orderId, pnr, status: CONFIRMED}
+
+    Voyage->>DB: INSERT flight_orders (orderId, pnr, userId, price, status)
+    DB-->>Voyage: Saved
+
+    Voyage->>Kafka: PUBLISH "voyage.order.created" {orderId, userId, price}
+    Kafka-->>Voyage: Ack
+
+    Voyage-->>BusinessNginx: 201 Created {orderId, pnr, status}
+    BusinessNginx-->>Gateway: Forward
+    Gateway-->>Client: Booking confirmation

@@ -1,0 +1,88 @@
+sequenceDiagram
+    autonumber
+    actor User
+    participant WebClient as Web Client
+    participant Gateway as Gateway :4000
+    participant CoreNginx as Core NGINX :80
+    participant Service as Protected Service<br/>(User/Voyage/Payment)
+    participant Auth as Auth Service :3001
+    participant Redis as Redis :6379
+
+    Note over User: User makes protected API call<br/>(e.g., GET /api/v1/users/profile)
+
+    User->>WebClient: Click "My Profile"
+    
+    WebClient->>Gateway: GET /api/v1/users/profile<br/>Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+    
+    Gateway->>CoreNginx: Forward with Authorization header
+    CoreNginx->>Service: GET /api/v1/users/profile
+    
+    Note over Service: authenticateToken middleware<br/>intercepts request
+    
+    Service->>Service: Extract JWT from header:<br/>Authorization: Bearer {token}
+    
+    alt No Authorization Header
+        Service-->>CoreNginx: 401 Unauthorized<br/>{error: "No token provided"}
+        CoreNginx-->>Gateway: Forward
+        Gateway-->>WebClient: Unauthorized
+        WebClient->>WebClient: Trigger token refresh flow
+        
+    else Token Present
+        Note over Service: JWT Verification Process
+        
+        Service->>Service: jwt.verify(token, JWT_SECRET)
+        
+        alt Token Signature Invalid
+            Service-->>CoreNginx: 401 Unauthorized<br/>{error: "Invalid token signature"}
+            CoreNginx-->>Gateway: Forward
+            Gateway-->>WebClient: Invalid token
+            WebClient->>WebClient: Clear tokens + redirect to login
+            
+        else Token Expired
+            Service-->>CoreNginx: 401 Unauthorized<br/>{error: "Token expired"}
+            CoreNginx-->>Gateway: Forward
+            Gateway-->>WebClient: Token expired
+            
+            Note over WebClient: Automatic token refresh<br/>using refreshToken cookie
+            
+            WebClient->>WebClient: Trigger refresh flow<br/>(see Token Refresh diagram)
+            
+        else Token Valid
+            Note over Service: Token decoded:<br/>{<br/>  userId: 123,<br/>  email: "john@example.com",<br/>  iat: 1733400000,<br/>  exp: 1733400900<br/>}
+            
+            Service->>Service: Extract userId from payload
+            
+            Note over Service: Validate session still exists<br/>(user hasn't logged out)
+            
+            Service->>Redis: GET session:123
+            
+            alt Session Not Found
+                Service-->>CoreNginx: 401 Unauthorized<br/>{error: "Session expired or invalid"}
+                Note over Service: User logged out from all devices<br/>or session expired
+                
+            else Session Found
+                Redis-->>Service: Session data:<br/>{<br/>  userId: 123,<br/>  refreshToken: "...",<br/>  lastActivity: "2025-12-05T10:30:00Z"<br/>}
+                
+                Note over Service: Update last activity timestamp
+                
+                Service->>Redis: HSET session:123<br/>lastActivity NOW()
+                Redis-->>Service: ✅ Updated
+                
+                Note over Service: Attach user data to request object<br/>req.user = {userId: 123, email: "..."}
+                
+                Service->>Service: Proceed to route handler<br/>with authenticated user context
+                
+                Note over Service: **Validation Complete!**<br/>Total time: ~5-15ms ⚡
+                
+                Service->>Service: Execute business logic<br/>(e.g., fetch user profile)
+                
+                Service-->>CoreNginx: 200 OK + Response data
+            end
+        end
+    end
+    
+    CoreNginx-->>Gateway: Forward response
+    Gateway-->>WebClient: API response
+    WebClient-->>User: Display data
+
+    Note over User,Redis: **JWT Validation Time:**<br/>Token valid + session cached: ~5-15ms ⚡<br/>Token valid + session miss: ~50-80ms<br/>Token invalid: ~2ms (immediate reject)

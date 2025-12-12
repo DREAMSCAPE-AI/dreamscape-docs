@@ -1,0 +1,72 @@
+sequenceDiagram
+    autonumber
+    actor User
+    participant WebClient as Web Client
+    participant Gateway as Gateway :4000
+    participant CoreNginx as Core NGINX :80
+    participant UserService as User Service :3002
+    participant Auth as Auth Service :3001
+    participant Redis as Redis :6379
+    participant DB as PostgreSQL
+    participant Kafka as Kafka Events
+
+    User->>WebClient: Edit profile:<br/>- Change name to "Jane Doe"<br/>- Update currency to EUR<br/>- Enable price alerts
+    
+    WebClient->>Gateway: PUT /api/v1/users/profile<br/>Authorization: Bearer token<br/>{<br/>  profile: {firstName: "Jane", lastName: "Doe"},<br/>  preferences: {currency: "EUR"},<br/>  notifications: {priceAlerts: true}<br/>}
+    
+    Gateway->>CoreNginx: Forward to Core Pod
+    CoreNginx->>UserService: PUT /api/v1/users/profile
+    
+    Note over UserService: JWT Authentication<br/>via middleware
+    
+    UserService->>Auth: authenticateToken(token)
+    Auth->>Redis: Validate session
+    Redis-->>Auth: Session valid
+    Auth-->>UserService: ✅ User authenticated<br/>(userId: 123)
+    
+    Note over UserService: Validation:<br/>✅ Profile data format<br/>✅ Currency code valid<br/>✅ Notification settings boolean
+    
+    UserService->>DB: BEGIN TRANSACTION
+    
+    alt Update Profile Section
+        UserService->>DB: UPDATE profiles<br/>SET first_name = 'Jane',<br/>    last_name = 'Doe',<br/>    updated_at = NOW()<br/>WHERE user_id = 123
+        DB-->>UserService: ✅ Profile updated
+    end
+    
+    alt Update Preferences Section
+        UserService->>DB: UPDATE user_preferences<br/>SET currency = 'EUR',<br/>    updated_at = NOW()<br/>WHERE user_id = 123
+        DB-->>UserService: ✅ Preferences updated
+    end
+    
+    alt Update Notifications Section
+        UserService->>DB: UPDATE notification_settings<br/>SET price_alerts = true,<br/>    updated_at = NOW()<br/>WHERE user_id = 123
+        DB-->>UserService: ✅ Notifications updated
+    end
+    
+    UserService->>DB: COMMIT TRANSACTION
+    
+    Note over UserService: Invalidate cache<br/>to ensure fresh data
+    
+    UserService->>Redis: DEL profile_cache:123
+    Redis-->>UserService: ✅ Cache cleared
+    
+    Note over UserService: Publish event for<br/>other services (analytics)
+    
+    UserService->>Kafka: PUBLISH event:<br/>topic: "user.profile.updated"<br/>{<br/>  userId: 123,<br/>  changes: ["name", "currency", "notifications"],<br/>  timestamp: "2025-12-05T10:30:00Z"<br/>}
+    
+    UserService->>DB: SELECT * FROM profiles WHERE user_id = 123<br/>(fetch updated profile)
+    DB-->>UserService: Updated profile data
+    
+    UserService->>Redis: SET profile_cache:123<br/>{updated_profile_data}<br/>TTL: 300s
+    Redis-->>UserService: ✅ Re-cached
+    
+    UserService-->>CoreNginx: 200 OK<br/>{<br/>  success: true,<br/>  message: "Profile updated successfully",<br/>  profile: {updated_data}<br/>}
+    
+    CoreNginx-->>Gateway: Forward response
+    Gateway-->>WebClient: Update confirmation
+    
+    WebClient->>WebClient: Update Redux state<br/>with new profile data
+    
+    WebClient-->>User: Show "Profile Updated!"<br/>+ Refresh UI with new data
+
+    Note over User,DB: **Total Time: ~200-300ms**<br/>(Transaction + cache invalidation + re-cache)

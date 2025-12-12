@@ -1,0 +1,46 @@
+sequenceDiagram
+    autonumber
+    actor User
+    participant WebClient as Web Client
+    participant Gateway as Gateway :4000
+    participant CoreNginx as Core NGINX :80
+    participant UserService as User Service :3002
+    participant Amadeus as Amadeus API
+    participant Redis as Redis :6379
+
+    Note over UserService: ⚠️ Currently Disabled
+
+    User->>WebClient: Click on "Eiffel Tower" activity
+    
+    WebClient->>Gateway: GET /api/v1/activities/details/:activityId<br/>(activityId: "EIFFEL_TOWER_123")
+    
+    Gateway->>CoreNginx: Forward to Core Pod
+    CoreNginx->>UserService: GET /api/v1/activities/details/EIFFEL_TOWER_123
+    
+    UserService->>Redis: GET activity_details:EIFFEL_TOWER_123
+    
+    alt Cache Hit
+        Redis-->>UserService: ✅ Cached details<br/>(TTL: 24 hours)
+        
+    else Cache Miss
+        Redis-->>UserService: ❌ Cache miss
+        
+        UserService->>Amadeus: GET /shopping/activities/EIFFEL_TOWER_123
+        
+        Note over Amadeus: Fetch detailed info:<br/>- Description<br/>- Opening hours<br/>- Reviews<br/>- Photos<br/>~300-600ms
+        
+        Amadeus-->>UserService: Activity details:<br/>{<br/>  name: "Eiffel Tower",<br/>  description: "...",<br/>  price: "25 EUR",<br/>  rating: 4.7,<br/>  photos: [...],<br/>  openingHours: {...}<br/>}
+        
+        UserService->>Redis: SET activity_details:EIFFEL_TOWER_123<br/>TTL: 86400s (24 hours)
+        Redis-->>UserService: ✅ Cached
+    end
+    
+    UserService-->>CoreNginx: 200 OK + Activity Details
+    CoreNginx-->>Gateway: Forward response
+    Gateway-->>WebClient: Activity details JSON
+    
+    WebClient->>WebClient: Render activity page:<br/>- Image gallery<br/>- Full description<br/>- Reviews section<br/>- Booking form
+    
+    WebClient-->>User: Display Eiffel Tower details
+
+    Note over User,Amadeus: **Details Load Time:**<br/>Cache hit: ~30ms ⚡<br/>Cache miss: ~500-800ms
