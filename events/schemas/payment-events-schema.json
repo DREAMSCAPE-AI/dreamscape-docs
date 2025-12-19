@@ -1,0 +1,286 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://dreamscape.io/schemas/payment-events/v1.0",
+  "title": "DreamScape Payment Events Schema",
+  "description": "JSON Schema for payment-related Kafka events in the DreamScape platform",
+  "definitions": {
+    "BaseEvent": {
+      "type": "object",
+      "required": ["eventId", "eventType", "timestamp", "version", "source", "payload"],
+      "properties": {
+        "eventId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Unique event identifier"
+        },
+        "eventType": {
+          "type": "string",
+          "description": "Type of the event"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp when the event occurred"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+$",
+          "description": "Event schema version"
+        },
+        "source": {
+          "type": "string",
+          "description": "Source service that published the event"
+        },
+        "correlationId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Optional correlation ID for distributed tracing"
+        },
+        "causationId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Optional ID of the event that caused this event"
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Optional additional metadata"
+        },
+        "payload": {
+          "type": "object",
+          "description": "Event-specific payload"
+        }
+      }
+    },
+    "PaymentInitiatedPayload": {
+      "type": "object",
+      "required": ["paymentId", "bookingId", "userId", "amount", "currency", "paymentMethod", "initiatedAt"],
+      "properties": {
+        "paymentId": {
+          "type": "string",
+          "description": "Payment unique identifier"
+        },
+        "bookingId": {
+          "type": "string",
+          "description": "Associated booking ID"
+        },
+        "userId": {
+          "type": "string",
+          "description": "User unique identifier"
+        },
+        "amount": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Payment amount"
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$",
+          "description": "Currency code (ISO 4217)"
+        },
+        "paymentMethod": {
+          "type": "string",
+          "enum": ["credit_card", "debit_card", "paypal", "bank_transfer", "crypto"],
+          "description": "Payment method"
+        },
+        "initiatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when payment was initiated"
+        }
+      }
+    },
+    "PaymentCompletedPayload": {
+      "type": "object",
+      "required": ["paymentId", "bookingId", "userId", "amount", "currency", "transactionId", "completedAt"],
+      "properties": {
+        "paymentId": {
+          "type": "string",
+          "description": "Payment unique identifier"
+        },
+        "bookingId": {
+          "type": "string",
+          "description": "Associated booking ID"
+        },
+        "userId": {
+          "type": "string",
+          "description": "User unique identifier"
+        },
+        "amount": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Payment amount"
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$",
+          "description": "Currency code (ISO 4217)"
+        },
+        "transactionId": {
+          "type": "string",
+          "description": "External payment gateway transaction ID"
+        },
+        "completedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when payment was completed"
+        }
+      }
+    },
+    "PaymentFailedPayload": {
+      "type": "object",
+      "required": ["paymentId", "bookingId", "userId", "amount", "currency", "errorCode", "errorMessage", "failedAt"],
+      "properties": {
+        "paymentId": {
+          "type": "string",
+          "description": "Payment unique identifier"
+        },
+        "bookingId": {
+          "type": "string",
+          "description": "Associated booking ID"
+        },
+        "userId": {
+          "type": "string",
+          "description": "User unique identifier"
+        },
+        "amount": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Payment amount"
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$",
+          "description": "Currency code (ISO 4217)"
+        },
+        "errorCode": {
+          "type": "string",
+          "description": "Error code from payment gateway"
+        },
+        "errorMessage": {
+          "type": "string",
+          "description": "Human-readable error message"
+        },
+        "failedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when payment failed"
+        }
+      }
+    },
+    "PaymentRefundedPayload": {
+      "type": "object",
+      "required": ["paymentId", "bookingId", "userId", "refundAmount", "currency", "refundId", "reason", "refundedAt"],
+      "properties": {
+        "paymentId": {
+          "type": "string",
+          "description": "Original payment unique identifier"
+        },
+        "bookingId": {
+          "type": "string",
+          "description": "Associated booking ID"
+        },
+        "userId": {
+          "type": "string",
+          "description": "User unique identifier"
+        },
+        "refundAmount": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Refund amount (may be partial)"
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$",
+          "description": "Currency code (ISO 4217)"
+        },
+        "refundId": {
+          "type": "string",
+          "description": "Refund transaction ID"
+        },
+        "reason": {
+          "type": "string",
+          "description": "Reason for refund"
+        },
+        "refundedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when refund was processed"
+        }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "title": "Payment Initiated Event",
+      "allOf": [
+        {
+          "$ref": "#/definitions/BaseEvent"
+        },
+        {
+          "properties": {
+            "eventType": {
+              "const": "payment.initiated"
+            },
+            "payload": {
+              "$ref": "#/definitions/PaymentInitiatedPayload"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "title": "Payment Completed Event",
+      "allOf": [
+        {
+          "$ref": "#/definitions/BaseEvent"
+        },
+        {
+          "properties": {
+            "eventType": {
+              "const": "payment.completed"
+            },
+            "payload": {
+              "$ref": "#/definitions/PaymentCompletedPayload"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "title": "Payment Failed Event",
+      "allOf": [
+        {
+          "$ref": "#/definitions/BaseEvent"
+        },
+        {
+          "properties": {
+            "eventType": {
+              "const": "payment.failed"
+            },
+            "payload": {
+              "$ref": "#/definitions/PaymentFailedPayload"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "title": "Payment Refunded Event",
+      "allOf": [
+        {
+          "$ref": "#/definitions/BaseEvent"
+        },
+        {
+          "properties": {
+            "eventType": {
+              "const": "payment.refunded"
+            },
+            "payload": {
+              "$ref": "#/definitions/PaymentRefundedPayload"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
