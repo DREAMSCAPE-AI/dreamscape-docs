@@ -1,209 +1,159 @@
-# Dépôt de Documentation DreamScape
+# DreamScape — Documentation
 
-## À propos
+Documentation complète de la plateforme DreamScape, une OTA (Online Travel Agency) basée sur une architecture microservices avec IA embarquée et expériences VR immersives.
 
-Ce dépôt centralise toute la documentation technique et fonctionnelle du projet DreamScape, une plateforme innovante de voyage combinant intelligence artificielle contextuelle et expériences panoramiques immersives pour offrir des expériences de voyage personnalisées.
+## Navigation rapide
 
-Ce référentiel sert de source unique de vérité pour tous les aspects documentaires du projet, permettant une gestion efficace des connaissances malgré notre rythme de développement de 2 jours par semaine.
-
-## Structure du dépôt
-
-La documentation est organisée pour centraliser toute la documentation de l'écosystème DreamScape :
-
-```
-documentation/
-├── services/                        # Documentation par service
-│   ├── auth-service/                # Service d'authentification
-│   ├── voyage-service/              # Service de voyage principal
-│   ├── ai-service/                  # Service d'IA et recommandations
-│   ├── user-service/                # Service de gestion utilisateur
-│   ├── payment-service/             # Service de paiement
-│   └── panorama-service/            # Service de vues panoramiques
-│
-├── infrastructure/                  # Documentation infrastructure
-│   ├── cicd/                        # CI/CD et déploiement
-│   ├── docker/                      # Configuration Docker
-│   └── kubernetes/                  # Déploiement Kubernetes
-│
-├── guides/                          # Guides techniques
-│   ├── setup/                       # Guides d'installation
-│   ├── deployment/                  # Guides de déploiement
-│   └── development/                 # Guides de développement
-│
-├── summaries/                       # Résumés d'implémentation
-│   ├── IMPLEMENTATION-SUMMARY-DR334.md
-│   ├── IMPLEMENTATION-SUMMARY-DR336.md
-│   └── TESTS_IMPLEMENTATION_SUMMARY.md
-│
-├── LICENSE                          # Licence du repository
-└── README.md                        # Ce fichier
-```
-
-## Installation et utilisation
-
-### Prérequis
-
-- Node.js 18 ou supérieur
-- Yarn ou npm
-
-### Installation locale
-
-```bash
-# Cloner le dépôt
-git clone https://github.com/dreamscape/dreamscape-documentation.git
-
-# Installer les dépendances
-cd dreamscape-documentation
-yarn install
-
-# Démarrer le serveur de développement
-yarn start
-```
-
-La documentation sera accessible à l'adresse http://localhost:3000.
-
-### Génération de la documentation
-
-```bash
-# Construire le site statique
-yarn build
-
-# Servir le site construit localement
-yarn serve
-```
-
-## Comment contribuer
-
-### Principes généraux
-
-1. **Documentation as Code** : La documentation est traitée comme du code, avec versionnement, revues et tests.
-2. **Format Markdown** : Les documents sont rédigés en Markdown enrichi de fonctionnalités Docusaurus (admonitions, tabs, etc.).
-3. **Diagrammes as Code** : Les diagrammes sont créés avec Mermaid, intégrés directement dans les documents Markdown.
-4. **Revue par les pairs** : Chaque modification significative doit être revue par au moins un autre membre de l'équipe.
-
-### Structure des documents
-
-Chaque document Markdown doit commencer par un en-tête frontmatter :
-
-```markdown
----
-id: nom-unique-du-document
-title: Titre du document
-description: Brève description du contenu
-sidebar_label: Libellé dans la barre latérale
-sidebar_position: 1
-tags: [tag1, tag2]
----
-
-Contenu du document...
-```
-
-### Procédure de contribution
-
-1. Créez une branche à partir de `main` avec le format `doc/[module]/[sujet]`
-2. Effectuez vos modifications en respectant la structure Docusaurus
-3. Prévisualisez vos modifications avec `yarn start`
-4. Soumettez une Pull Request avec un titre clair
-5. Demandez une revue à au moins un membre de l'équipe concernée
-6. Une fois approuvée, la PR peut être fusionnée dans `main`
-
-### Utilisation des fonctionnalités Docusaurus
-
-Docusaurus offre plusieurs fonctionnalités pour enrichir la documentation :
-
-- **Admonitions** : Encadrés pour mettre en évidence des informations importantes
-  ```markdown
-  :::note Titre
-  Contenu de la note
-  :::
-
-  :::warning
-  Avertissement important
-  :::
-  ```
-
-- **Onglets** : Pour présenter des alternatives (ex: différentes plateformes)
-  ```markdown
-  import Tabs from '@theme/Tabs';
-  import TabItem from '@theme/TabItem';
-
-  <Tabs>
-    <TabItem value="web" label="Web">Contenu web</TabItem>
-    <TabItem value="mobile" label="Mobile">Contenu mobile</TabItem>
-  </Tabs>
-  ```
-
-- **Diagrammes Mermaid** : Pour des diagrammes techniques
-  ```markdown
-  ```mermaid
-  graph TD;
-      A-->B;
-      A-->C;
-      B-->D;
-      C-->D;
-  ```
-  ```
-
-## Intégration continue
-
-Le dépôt utilise GitHub Actions pour l'intégration continue :
-
-1. **Documentation CI** : Vérifie la validité de la documentation à chaque pull request
-   - Linting Markdown
-   - Validation des liens internes
-   - Construction du site Docusaurus
-
-2. **Documentation CD** : Déploie automatiquement le site après fusion dans `main`
-   - Construction du site statique
-   - Déploiement sur GitHub Pages ou notre serveur interne
-   - Génération de versions PDF pour téléchargement
-
-## Versionnement de la documentation
-
-Docusaurus permet le versionnement de la documentation, ce qui est particulièrement utile pour suivre les évolutions du projet :
-
-- **Version courante** : Documentation de la dernière version (`next`)
-- **Versions stables** : Documentation des jalons majeurs (ex: MVP, Release 1.0)
-
-Les commandes pour gérer les versions :
-
-```bash
-# Créer une nouvelle version à partir de la documentation actuelle
-yarn run docusaurus docs:version 1.0.0
-
-# Construire toutes les versions
-yarn build
-```
-
-## Recherche et navigation
-
-La documentation intègre Algolia DocSearch pour une recherche performante :
-
-- Indexation automatique du contenu
-- Recherche instantanée
-- Suggestions pertinentes
-
-La navigation est facilitée par :
-- Une barre latérale organisée thématiquement
-- Des liens contextuels entre documents liés
-- Un fil d'Ariane pour situer le document dans la hiérarchie
-
-## Contacts
-
-Pour toute question concernant la documentation :
-
-- **Responsable documentation** : Kevin Coutellier
-- **Canal Slack** : #dreamscape-documentation
-- **Email** : documentation@dreamscape.internal
-
-## Planning de mise à jour
-
-La documentation suit un cycle de mise à jour régulier :
-
-- **Mise à jour majeure** : À la fin de chaque phase du projet, avec création d'une nouvelle version
-- **Mise à jour mineure** : À la fin de chaque sprint, reflétée dans les articles de blog
-- **Révision complète** : Avant chaque jalon clé (keynote, MVP)
+| Section | Description |
+|---------|-------------|
+| [Démarrage rapide](#démarrage-rapide) | Installation et lancement en local |
+| [Architecture](#architecture) | Conception système, schéma de données, événements |
+| [Services backend](#services-backend) | Documentation de chaque microservice |
+| [API Reference](#api-reference) | Endpoints, requêtes, réponses |
+| [Frontend](#frontend) | Application React, pages, stores |
+| [Infrastructure](#infrastructure) | Docker, Kubernetes, CI/CD, monitoring |
+| [Guides](#guides) | Tests, notifications, i18n, flux métier |
+| [Sécurité & RGPD](#sécurité--rgpd) | Analyses sécurité, conformité RGPD |
 
 ---
 
-Dernière mise à jour : 20 mai 2025
+## Démarrage rapide
+
+| Document | Contenu |
+|----------|---------|
+| [Prérequis](getting-started/prerequisites.md) | Node 18+, Docker, outils requis |
+| [Installation locale](getting-started/local-development.md) | Cloner, installer, démarrer tous les services |
+| [Configuration des environnements](getting-started/environment-configuration.md) | Variables d'environnement, ports, secrets |
+| [Structure du projet](getting-started/project-structure.md) | Carte du monorepo (5 sous-repos) |
+
+---
+
+## Architecture
+
+| Document | Contenu |
+|----------|---------|
+| [Vue d'ensemble](architecture/README.md) | Diagramme système global, flux de données |
+| [Microservices](architecture/microservices-overview.md) | Carte des services, ports, responsabilités |
+| [Architecture événementielle](architecture/event-driven.md) | Patterns Kafka, SAGA, CQRS, ECST |
+| [Schéma de base de données](architecture/database-schema.md) | Modèles Prisma, ERD, relations |
+| [API Gateway](architecture/gateway.md) | Proxy routing, sessions VR, WebSocket |
+| **Docker** | |
+| [Multi-stage builds](architecture/docker/multi-stage-builds.md) | Optimisation des images Docker |
+| [Supervisor & Big Pods](architecture/docker/big-pods.md) | Architecture 3 pods de déploiement |
+| [Orchestration Supervisor](architecture/docker/supervisor-orchestration.md) | Gestion multi-processus |
+
+---
+
+## Services backend
+
+| Service | Port | Document |
+|---------|------|----------|
+| Auth Service | 3001 | [auth-service.md](services/auth-service.md) |
+| User Service | 3002 | [user-service.md](services/user-service.md) |
+| Voyage Service | 3003 | [voyage-service.md](services/voyage-service.md) |
+| Payment Service | 3004 | [payment-service.md](services/payment-service.md) |
+| AI Service | 3005 | [ai-service.md](services/ai-service.md) |
+| Panorama VR | 3006 | [panorama-vr.md](services/panorama-vr.md) |
+
+---
+
+## API Reference
+
+Documentation détaillée de tous les endpoints (méthode, path, auth, body, réponse).
+
+| Document | Contenu |
+|----------|---------|
+| [Conventions & Erreurs](api-reference/README.md) | Auth headers, format erreurs, pagination |
+| [Auth API](api-reference/auth-api.md) | Login, register, refresh, logout, profil |
+| [User API](api-reference/user-api.md) | Profil, onboarding, favoris, RGPD, notifications |
+| [Voyage API](api-reference/voyage-api.md) | Vols, hôtels, activités, panier, réservations |
+| [Payment API](api-reference/payment-api.md) | Paiements Stripe, webhooks |
+| [AI API](api-reference/ai-api.md) | Recommandations, cold start, prédictions |
+| [Gateway API](api-reference/gateway-api.md) | Routes proxy, sessions VR |
+
+---
+
+## Événements Kafka
+
+| Document | Topics couverts |
+|----------|----------------|
+| [Vue d'ensemble](events/README.md) | Architecture événementielle, conventions de nommage |
+| [Auth Events](events/auth-events.md) | login, logout, password, token |
+| [User Events](events/user-events.md) | created, updated, preferences, onboarding |
+| [Payment Events](events/payment-events.md) | initiated, completed, failed, refunded |
+| [Voyage Events](events/voyage-events.md) | booking, cart, itinerary |
+| [AI Events](events/ai-events.md) | recommendation, prediction, segmentation |
+
+---
+
+## Frontend
+
+| Document | Contenu |
+|----------|---------|
+| [Vue d'ensemble](frontend/README.md) | Stack technique, architecture globale |
+| [Web Client](frontend/web-client.md) | 30+ pages, routing, auth flow, i18n |
+| [Stores & State](frontend/stores-and-state.md) | Zustand stores, React Query |
+| [Couche services](frontend/service-layer.md) | Classes API (Auth, Voyage, Cart, etc.) |
+| [Composants](frontend/components.md) | Design system, composants clés |
+| [Panel Admin](frontend/admin-panel.md) | Pages admin, KPIs, gestion utilisateurs |
+
+---
+
+## Infrastructure
+
+| Document | Contenu |
+|----------|---------|
+| [Vue d'ensemble](infrastructure/README.md) | Stack infra, Big Pods, environnements |
+| [Kafka](infrastructure/kafka.md) | Cluster, topics, consumers, monitoring |
+| [Docker Compose](infrastructure/docker-compose.md) | Orchestration locale et production |
+| [Kubernetes](infrastructure/kubernetes.md) | k3s, kustomize, overlays par env |
+| [CI/CD](infrastructure/ci-cd.md) | GitHub Actions, pipeline en 2 stages |
+| [Monitoring](infrastructure/monitoring.md) | Prometheus, Grafana, alertes |
+| [Terraform](infrastructure/terraform.md) | Infrastructure as Code |
+
+---
+
+## Guides
+
+| Document | Contenu |
+|----------|---------|
+| [Tests](guides/testing.md) | Jest, Vitest, Cypress, couverture, mock server |
+| [Notifications](guides/notifications.md) | Socket.IO, préférences, Kafka |
+| [Flux panier & réservation](guides/cart-and-booking-flow.md) | Parcours d'achat end-to-end |
+| [Cache Redis](guides/redis-cache.md) | Stratégie de cache, TTL, patterns |
+| [Internationalisation](guides/i18n.md) | i18next, EN/FR, workflow de traduction |
+
+---
+
+## Sécurité & RGPD
+
+| Document | Contenu |
+|----------|---------|
+| [Analyse sécurité globale](security/README.md) | Vue d'ensemble, recommandations |
+| [Sécurité Auth Service](security/auth-security.md) | JWT, brute force, session management |
+| [Sécurité Payment Service](security/payment-security.md) | PCI DSS, Stripe, webhooks |
+| [Conformité RGPD](security/gdpr/compliance.md) | Implémentation technique RGPD |
+| [Politique des cookies](security/gdpr/cookie-policy.md) | Catégories, consentement |
+| [Politique de confidentialité](security/gdpr/privacy-policy.md) | Données collectées, droits utilisateur |
+
+---
+
+## Référence
+
+| Document | Contenu |
+|----------|---------|
+| [Limitations API Amadeus (test)](reference/amadeus-test-limitations.md) | Restrictions en environnement test |
+| [Exemples recherche de vols](reference/flight-search-examples.md) | curl, TypeScript, React |
+| [Setup base de données](reference/database-setup.md) | PostgreSQL, Prisma migrations |
+| [Données ML de seed](reference/seed-data.md) | Génération du jeu de données ML |
+| [Spécifications VR Paris](reference/paris-vr-spec.md) | Environnement panoramique Paris |
+
+---
+
+## Archives
+
+Les résumés d'implémentation Jira se trouvent dans [summaries/](summaries/).
+
+---
+
+*Plateforme DreamScape — Architecture microservices · React 18 · Node.js 18 · PostgreSQL · Kafka · Kubernetes*
