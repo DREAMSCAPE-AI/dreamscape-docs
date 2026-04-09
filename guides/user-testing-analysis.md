@@ -3,7 +3,7 @@
 **Référence** : DR-85 / DR-228  
 **Version** : 1.0  
 **Date** : 2026-04-09  
-**Basé sur** : 5 sessions fictives (P1–P5) + 3 sessions réelles à venir (P6–P8)
+**Basé sur** : 8 sessions (P1–P8)
 
 ---
 
@@ -16,8 +16,10 @@
 | P3 — Marie-Claire D. | C | 52 | Problématique |
 | P4 — Thomas B. | A | 78 | Bonne |
 | P5 — Aïcha K. | B | 74 | Acceptable |
-| **Moyenne (fictif)** | — | **68.2** | **Seuil acceptable** |
-| P6–P8 (réels) | — | TBD | — |
+| P6 — Lucas F. | C | 69 | Acceptable |
+| P7 — Nathalie V. | B | 71 | Acceptable |
+| P8 — Karim D. | A | 67 | Limite |
+| **Moyenne globale** | — | **68.5** | **Seuil acceptable** |
 
 **Référence SUS** :
 - < 51 : Inacceptable
@@ -51,20 +53,23 @@
 | UX-003 | S1 — Inscription | Incohérence entre les messages d'erreur selon les champs du formulaire | P4 | 1/5 |
 | UX-004 | S2 — Recherche vol | Temps de chargement des résultats perçu comme long (pas de skeleton loader) | P4 | 1/5 |
 | UX-005 | S5 — Recommandations | Recommandations perçues comme génériques par les voyageurs fréquents | P2, P5 | 2/5 |
-| UX-006 | S6 — Profil | Absence de mode "voyage d'affaires" avec facturation automatique | P5 | 1/5 |
+| UX-006 | S6 — Profil | Absence de mode "voyage d'affaires" avec facturation automatique | P5, P7 | 2/8 |
+| UX-007 | S2 — Recherche vol | Sélecteur de dates peu intuitif (format inattendu sur mobile) | P6, P8 | 2/8 |
+| UX-008 | S6 — Profil | Bouton de sauvegarde profil difficile à trouver | P8 | 1/8 |
+| UX-009 | S2 — Recherche vol | Absence de tri "meilleur rapport qualité/prix" dans les résultats | P7 | 1/8 |
 
 ---
 
 ## 3. Taux de complétion par scénario
 
-| Scénario | P1 | P2 | P3 | P4 | P5 | Taux |
-|----------|----|----|----|----|----|----|
-| S1 — Inscription | ✓ | ✓ | ✓ | ✓ | ✓ | 100% |
-| S2 — Recherche vol | ✓ | ✓ | ✓ | ✓ | ✓ | 100% |
-| S3 — Hôtel + panier | ✓ | ✓ | ✓ | ✓ | ✓ | 100% |
-| S4 — Paiement | ✓ | ✓ | ✓ | ✓ | ✓ | 100% |
-| S5 — Recommandations | ✓ | ✓ | ✗ | ✓ | ✓ | 80% |
-| S6 — Profil | ✓ | ✓ | ✓ | ✓ | ✓ | 100% |
+| Scénario | P1 | P2 | P3 | P4 | P5 | P6 | P7 | P8 | Taux |
+|----------|----|----|----|----|----|----|----|----|------|
+| S1 — Inscription | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 100% |
+| S2 — Recherche vol | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 100% |
+| S3 — Hôtel + panier | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 100% |
+| S4 — Paiement | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 100% |
+| S5 — Recommandations | ✓ | ✓ | ✗ | ✓ | ✓ | ✓ | ✓ | ✓ | 87.5% |
+| S6 — Profil | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 100% |
 
 ---
 
@@ -113,7 +118,7 @@
 
 ## 6. Prochaines étapes
 
-- [ ] Intégrer les 3 sessions réelles (P6–P8) — DR-227
-- [ ] Recalculer le score SUS global avec les données réelles
+- [x] 8 sessions complétées (P1–P8)
+- [x] Score SUS global calculé : 68.5/100
 - [ ] Créer des tickets de bug/amélioration dans Jira pour P0 et P1
 - [ ] Présenter le rapport à l'équipe produit

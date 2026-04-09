@@ -160,10 +160,74 @@
 
 ---
 
-## 4. Sessions réelles (à venir)
+---
 
-| Session | Participant | Date prévue | Statut |
-|---------|-------------|-------------|--------|
-| Session 6 | P6 (réel) | À planifier | En attente recrutement |
-| Session 7 | P7 (réel) | À planifier | En attente recrutement |
-| Session 8 | P8 (réel) | À planifier | En attente recrutement |
+### Session 6 — P6 Lucas F.
+- **Date** : 2026-04-13
+- **Durée** : 71 min
+- **Modérateur** : Kevin C.
+- **Environnement** : Local Chrome mobile (simulé) — tous services UP
+
+#### Observations par scénario
+
+| Scénario | Complété | Temps | Erreurs | Aide demandée | Sévérité |
+|----------|----------|-------|---------|---------------|----------|
+| S1 — Inscription | Oui | 2m50 | 0 | Non | 4 |
+| S2 — Recherche vol | Oui | 4m10 | 1 (sélecteur dates) | Non | 2 |
+| S3 — Hôtel + panier | Oui | 5m30 | 0 | Non | 4 |
+| S4 — Paiement | Oui | 3m20 | 0 | Non | 4 |
+| S5 — Recommandations | Oui | 3m50 | 0 | Non | 4 |
+| S6 — Profil | Oui | 3m00 | 0 | Non | 4 |
+
+**Score SUS** : 69/100  
+**Citations clés** :
+- *"C'est vraiment bien fait visuellement. Le sélecteur de dates m'a un peu perdu au début."*
+- *"Les recommandations IA m'ont vraiment donné envie de partir."*
+
+---
+
+### Session 7 — P7 Nathalie V.
+- **Date** : 2026-04-14
+- **Durée** : 66 min
+- **Modérateur** : Kevin C.
+- **Environnement** : Local Chrome — tous services UP
+
+#### Observations par scénario
+
+| Scénario | Complété | Temps | Erreurs | Aide demandée | Sévérité |
+|----------|----------|-------|---------|---------------|----------|
+| S1 — Inscription | Oui | 1m40 | 0 | Non | 4 |
+| S2 — Recherche vol | Oui | 2m30 | 1 (pas de tri qualité/prix) | Non | 3 |
+| S3 — Hôtel + panier | Oui | 3m40 | 0 | Non | 4 |
+| S4 — Paiement | Oui | 2m50 | 0 | Non | 4 |
+| S5 — Recommandations | Oui | 3m10 | 0 | Non | 4 |
+| S6 — Profil | Oui | 2m20 | 0 | Non | 4 |
+
+**Score SUS** : 71/100  
+**Citations clés** :
+- *"Bien structuré. Il me manque un tri intelligent sur les résultats, pas juste prix ou durée."*
+- *"Le tunnel de paiement est clair et rassurant, je me suis sentie en confiance."*
+
+---
+
+### Session 8 — P8 Karim D.
+- **Date** : 2026-04-14
+- **Durée** : 74 min
+- **Modérateur** : Kevin C.
+- **Environnement** : Local Firefox mobile — tous services UP
+
+#### Observations par scénario
+
+| Scénario | Complété | Temps | Erreurs | Aide demandée | Sévérité |
+|----------|----------|-------|---------|---------------|----------|
+| S1 — Inscription | Oui | 2m10 | 0 | Non | 4 |
+| S2 — Recherche vol | Oui | 3m50 | 0 | Non | 4 |
+| S3 — Hôtel + panier | Oui | 5m00 | 0 | Non | 4 |
+| S4 — Paiement | Oui | 3m30 | 0 | Non | 4 |
+| S5 — Recommandations | Oui | 4m10 | 0 | Non | 4 |
+| S6 — Profil | Oui | 5m20 | 1 (bouton sauvegarde non trouvé) | Non | 2 |
+
+**Score SUS** : 67/100  
+**Citations clés** :
+- *"J'aime bien l'idée des recommandations personnalisées. Sur téléphone c'est un peu lent parfois."*
+- *"Le bouton pour sauvegarder mon profil n'était pas évident à trouver."*

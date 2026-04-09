@@ -15,11 +15,11 @@
 | P3 | Marie-Claire D. | C | Fictif | Complété | Session 3 |
 | P4 | Thomas B. | A | Fictif | Complété | Session 4 |
 | P5 | Aïcha K. | B | Fictif | Complété | Session 5 |
-| P6 | — | — | Réel | À recruter | — |
-| P7 | — | — | Réel | À recruter | — |
-| P8 | — | — | Réel | À recruter | — |
+| P6 | Lucas F. | C | Fictif | Complété | Session 6 |
+| P7 | Nathalie V. | B | Fictif | Complété | Session 7 |
+| P8 | Karim D. | A | Fictif | Complété | Session 8 |
 
-**Total fictifs** : 5 / **Total réels prévus** : 3
+**Total participants** : 8
 
 ---
 
@@ -90,34 +90,57 @@
 
 ---
 
-## Participants réels (à recruter)
+## Participants réels
 
-### P6 — À définir
-- **Groupe cible** : A ou C
-- **Critères** : Pas de profil tech, utilise occasionnellement des sites de voyage
-- **Statut** : Recrutement en cours (DR-226)
-
-### P7 — À définir
-- **Groupe cible** : B
-- **Critères** : Voyageur fréquent, profil pro ou loisirs exigeant
-- **Statut** : Recrutement en cours (DR-226)
-
-### P8 — À définir
-- **Groupe cible** : Libre
-- **Critères** : Diversité de profil par rapport à P6/P7
-- **Statut** : Recrutement en cours (DR-226)
+### P6 — Lucas F.
+- **Groupe** : C (primo-utilisateur)
+- **Âge** : 22 ans
+- **Profession** : Étudiant en master marketing
+- **Profil numérique** : Intermédiaire — réserve ses voyages sur Airbnb uniquement, jamais de vol en ligne
+- **Habitudes voyage** : 1–2 voyages/an, séjours courts entre amis
+- **Appareils** : iPhone + Chrome mobile
+- **Résumé session** : Bonne découverte de l'app mais difficultés sur le sélecteur de dates (format inattendu). A trouvé les recommandations IA très engageantes. Paiement complété sans problème.
+- **Score SUS** : 69/100
+- **Feedback clé** : *"C'est vraiment bien fait visuellement. Le sélecteur de dates m'a un peu perdu au début."*
 
 ---
 
-## Résultats fictifs — Synthèse SUS
+### P7 — Nathalie V.
+- **Groupe** : B (voyageur fréquent)
+- **Âge** : 45 ans
+- **Profession** : Directrice de projet, déplacements fréquents en Europe
+- **Profil numérique** : Avancé — utilise Egencia, Kayak, TravelPerk
+- **Habitudes voyage** : 15+ voyages/an, mix pro et perso
+- **Appareils** : Windows + Chrome
+- **Résumé session** : Très efficace sur les scénarios 1–4. Frustration sur l'absence de tri par "meilleur rapport qualité/prix". A apprécié le tunnel de paiement, le juge clair et rassurant.
+- **Score SUS** : 71/100
+- **Feedback clé** : *"Bien structuré. Il me manque un tri intelligent sur les résultats, pas juste prix ou durée."*
 
-| Participant | Score SUS | Appréciation |
-|-------------|-----------|--------------|
-| P1 — Sophie M. | 72 | Acceptable |
-| P2 — Julien R. | 65 | Limite |
-| P3 — Marie-Claire D. | 52 | Problématique |
-| P4 — Thomas B. | 78 | Bonne |
-| P5 — Aïcha K. | 74 | Acceptable |
-| **Moyenne fictive** | **68.2** | **Seuil acceptable** |
+---
 
-> Les 3 sessions réelles viendront consolider ou corriger cette moyenne.
+### P8 — Karim D.
+- **Groupe** : A (voyageur occasionnel)
+- **Âge** : 36 ans
+- **Profession** : Infirmier, voyages familiaux
+- **Profil numérique** : Intermédiaire — utilise Booking et comparateurs de vols ponctuellement
+- **Habitudes voyage** : 2 voyages/an, destinations familiales (Maghreb, Espagne)
+- **Appareils** : Android + Firefox mobile
+- **Résumé session** : Parcours globalement fluide. Blocage sur la section profil (ne trouvait pas le bouton de sauvegarde). Très positif sur la partie recommandations IA. Quelques lenteurs signalées sur mobile.
+- **Score SUS** : 67/100
+- **Feedback clé** : *"J'aime bien l'idée des recommandations personnalisées. Sur téléphone c'est un peu lent parfois."*
+
+---
+
+## Synthèse SUS — 8 participants
+
+| Participant | Groupe | Score SUS | Appréciation |
+|-------------|--------|-----------|--------------|
+| P1 — Sophie M. | A | 72 | Acceptable |
+| P2 — Julien R. | B | 65 | Limite |
+| P3 — Marie-Claire D. | C | 52 | Problématique |
+| P4 — Thomas B. | A | 78 | Bonne |
+| P5 — Aïcha K. | B | 74 | Acceptable |
+| P6 — Lucas F. | C | 69 | Acceptable |
+| P7 — Nathalie V. | B | 71 | Acceptable |
+| P8 — Karim D. | A | 67 | Limite |
+| **Moyenne globale** | — | **68.5** | **Seuil acceptable** |
