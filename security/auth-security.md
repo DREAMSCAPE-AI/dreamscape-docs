@@ -278,8 +278,14 @@ it('should prevent timing attacks', async () => {
 
 3. **Énumération d'Utilisateurs**
    - **Impact** : Révélation d'emails valides
-   - **Mitigation Actuelle** : Messages d'erreur génériques ✅
+   - **Mitigation Actuelle** : Messages d'erreur génériques ✅ + forgot-password retourne toujours `success: true` ✅
    - **Action Requise** : Monitoring des patterns
+
+4. **Réinitialisation de mot de passe** ✅ Implémenté (US-CORE-003)
+   - Token cryptographiquement sécurisé (`crypto.randomBytes(32)`)
+   - Expiration 24h
+   - Token à usage unique (marqué `used` après utilisation)
+   - Force logout toutes les sessions après reset
 
 ## 📈 Plan d'Amélioration de Sécurité
 

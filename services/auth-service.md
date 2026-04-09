@@ -219,6 +219,47 @@ Révoque tous les refresh tokens de l'utilisateur (déconnexion multi-appareils)
 
 ---
 
+### `POST /api/v1/auth/forgot-password`
+
+Génère un token de réinitialisation et envoie un email (via SendGrid). Si SendGrid n'est pas configuré, le lien est loggé en console.
+
+**Auth** : Publique | **Rate limit** : `loginLimiter`
+
+**Body :**
+```json
+{ "email": "user@example.com" }
+```
+
+**Réponse 200 :** `{ "success": true }` — toujours, même si l'email n'existe pas (anti-énumération).
+
+**Durée de validité du token** : 24 heures. Un nouvel appel invalide les tokens précédents non utilisés.
+
+---
+
+### `PUT /api/v1/auth/reset-password`
+
+Réinitialise le mot de passe via le token reçu par email.
+
+**Auth** : Publique
+
+**Body :**
+```json
+{
+  "token": "abc123def456...",
+  "newPassword": "NewPassword1!"
+}
+```
+
+**Réponse 200 :** `{ "success": true }`
+
+**Effets** :
+- Marque le token comme `used`
+- Supprime toutes les sessions actives (force logout multi-appareils)
+
+**Erreurs** : `400` token invalide/expiré/déjà utilisé | `400` mot de passe ne respecte pas les règles
+
+---
+
 ### `GET /health`
 
 ```json
@@ -232,6 +273,7 @@ Révoque tous les refresh tokens de l'utilisateur (déconnexion multi-appareils)
 | `User` | `users` | Entité utilisateur principale |
 | `Session` | `sessions` | Sessions actives |
 | `TokenBlacklist` | `token_blacklist` | Tokens révoqués |
+| `PasswordReset` | `password_resets` | Tokens de réinitialisation mot de passe |
 
 ## Événements Kafka produits
 

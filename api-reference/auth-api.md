@@ -11,6 +11,8 @@
 | `GET` | `/profile` | JWT | Profil courant |
 | `PUT` | `/profile` | JWT | Mise à jour profil |
 | `POST` | `/change-password` | JWT | Changement mot de passe |
+| `POST` | `/forgot-password` | Non | Demande de réinitialisation |
+| `PUT` | `/reset-password` | Non | Réinitialisation via token |
 | `POST` | `/refresh` | Cookie | Renouvellement token |
 | `POST` | `/verify-token` | JWT | Vérification token |
 | `POST` | `/logout` | Cookie | Déconnexion |
@@ -172,6 +174,58 @@ curl -X POST http://localhost:3000/api/v1/auth/verify-token \
   "data": { "user": { "id": "...", "email": "...", "role": "..." } }
 }
 ```
+
+---
+
+## `POST /forgot-password`
+
+```bash
+curl -X POST http://localhost:3001/api/v1/auth/forgot-password \
+  -H "Content-Type: application/json" \
+  -d '{"email": "jean@example.com"}'
+```
+
+**Body :**
+
+| Champ | Type | Requis |
+|-------|------|--------|
+| `email` | string | oui — format email valide |
+
+**200 OK :**
+```json
+{ "success": true }
+```
+
+> Retourne toujours `success: true` même si l'email n'existe pas (anti-énumération).
+> Sans SendGrid configuré, le lien est affiché dans les logs du service (`[DEV] Password reset link for ...`).
+
+**Rate limit** : `loginLimiter` | **Erreurs :** `400` validation
+
+---
+
+## `PUT /reset-password`
+
+```bash
+curl -X PUT http://localhost:3001/api/v1/auth/reset-password \
+  -H "Content-Type: application/json" \
+  -d '{"token": "abc123...", "newPassword": "NewPassword1!"}'
+```
+
+**Body :**
+
+| Champ | Type | Requis | Contraintes |
+|-------|------|--------|-------------|
+| `token` | string | oui | Token reçu par email |
+| `newPassword` | string | oui | Min 8 chars, maj + min + chiffre + spécial |
+
+**200 OK :**
+```json
+{ "success": true }
+```
+
+**Effets** : Met le token à `used = true`, supprime toutes les sessions actives de l'utilisateur (force logout multi-appareils).
+
+**Erreurs :** `400` token invalide/expiré/déjà utilisé | `400` validation mot de passe
 
 ---
 
