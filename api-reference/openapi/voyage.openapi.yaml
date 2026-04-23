@@ -1,0 +1,511 @@
+openapi: 3.0.3
+info:
+  title: DreamScape Voyage API
+  description: |
+    Vols, hôtels, activités, panier, réservations, itinéraires.
+    Intégration Amadeus.
+    Service Voyage (port 3003) — exposé via le Gateway sur `/api/v1/voyage`.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3000/api/v1/voyage
+    description: Gateway local (dev)
+  - url: https://api.dreamscape.app/api/v1/voyage
+    description: Production
+
+tags:
+  - { name: Flights,         description: Recherche et analyse de vols }
+  - { name: Accommodations,  description: Hôtels }
+  - { name: Activities,      description: Activités et expériences }
+  - { name: Cart,            description: Panier multi-articles }
+  - { name: Bookings,        description: Réservations }
+  - { name: Itineraries,     description: Itinéraires de voyage }
+  - { name: Reference,       description: Aéroports, compagnies, destinations }
+
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  schemas:
+    Envelope:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { type: object }
+
+    Money:
+      type: object
+      properties:
+        total: { type: string, example: "299.50" }
+        currency: { type: string, example: "EUR" }
+
+    FlightSegment:
+      type: object
+      properties:
+        departure:
+          type: object
+          properties:
+            iataCode: { type: string, example: "CDG" }
+            at: { type: string, format: date-time }
+        arrival:
+          type: object
+          properties:
+            iataCode: { type: string, example: "BCN" }
+            at: { type: string, format: date-time }
+        carrierCode: { type: string, example: "VY" }
+        number: { type: string, example: "8739" }
+
+    FlightOffer:
+      type: object
+      properties:
+        id: { type: string }
+        price: { $ref: '#/components/schemas/Money' }
+        itineraries:
+          type: array
+          items:
+            type: object
+            properties:
+              duration: { type: string, example: "PT2H05M" }
+              segments:
+                type: array
+                items: { $ref: '#/components/schemas/FlightSegment' }
+
+    CartItem:
+      type: object
+      required: [itemType, itemData, quantity, price, currency]
+      properties:
+        itemType: { type: string, enum: [flight, hotel, activity] }
+        itemData: { type: object }
+        quantity: { type: integer, default: 1 }
+        price: { type: number, format: float }
+        currency: { type: string, default: EUR }
+
+    Passenger:
+      type: object
+      properties:
+        type: { type: string, enum: [adult, child, infant] }
+        firstName: { type: string }
+        lastName: { type: string }
+        dateOfBirth: { type: string, format: date }
+
+    CheckoutRequest:
+      type: object
+      properties:
+        metadata:
+          type: object
+          properties:
+            passengerDetails:
+              type: array
+              items: { $ref: '#/components/schemas/Passenger' }
+            contactEmail: { type: string, format: email }
+
+    BookingResponse:
+      type: object
+      properties:
+        bookingReference: { type: string, example: "DS-A7B3X2K1" }
+        clientSecret: { type: string }
+        paymentIntentId: { type: string }
+        amount: { type: number }
+        currency: { type: string }
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ─── VOLS ─────────────────────────────────────────────
+  /flights/search:
+    get:
+      tags: [Flights]
+      summary: Rechercher des vols (Amadeus)
+      security: []
+      parameters:
+        - { in: query, name: originLocationCode, required: true, schema: { type: string }, description: "Code IATA ou nom de ville" }
+        - { in: query, name: destinationLocationCode, required: true, schema: { type: string } }
+        - { in: query, name: departureDate, required: true, schema: { type: string, format: date } }
+        - { in: query, name: returnDate, schema: { type: string, format: date } }
+        - { in: query, name: adults, schema: { type: integer, default: 1 } }
+        - { in: query, name: children, schema: { type: integer, default: 0 } }
+        - { in: query, name: infants, schema: { type: integer, default: 0 } }
+        - { in: query, name: travelClass, schema: { type: string, enum: [ECONOMY, BUSINESS, FIRST] } }
+        - { in: query, name: nonStop, schema: { type: boolean } }
+        - { in: query, name: maxPrice, schema: { type: number } }
+        - { in: query, name: max, schema: { type: integer, default: 250 } }
+      responses:
+        '200':
+          description: Liste de vols
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/FlightOffer' }
+                  meta:
+                    type: object
+                    properties:
+                      count: { type: integer }
+
+  /flights/destinations:
+    get:
+      tags: [Flights]
+      summary: Destinations disponibles
+      security: []
+      responses: { '200': { description: OK } }
+
+  /flights/price-analysis:
+    get:
+      tags: [Flights]
+      summary: Analyse de prix historique
+      security: []
+      parameters:
+        - { in: query, name: originIataCode, required: true, schema: { type: string } }
+        - { in: query, name: destinationIataCode, required: true, schema: { type: string } }
+        - { in: query, name: departureDate, required: true, schema: { type: string, format: date } }
+      responses: { '200': { description: OK } }
+
+  /flights/choice-prediction:
+    post:
+      tags: [Flights]
+      summary: Prédiction du meilleur choix
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object }
+      responses: { '200': { description: OK } }
+
+  /flights/inspiration:
+    get:
+      tags: [Flights]
+      summary: Suggestions de destinations
+      security: []
+      parameters:
+        - { in: query, name: origin, required: true, schema: { type: string } }
+      responses: { '200': { description: OK } }
+
+  /flights/cheapest-dates:
+    get:
+      tags: [Flights]
+      summary: Dates les moins chères
+      security: []
+      parameters:
+        - { in: query, name: origin, required: true, schema: { type: string } }
+        - { in: query, name: destination, required: true, schema: { type: string } }
+      responses: { '200': { description: OK } }
+
+  /flights/status:
+    get:
+      tags: [Flights]
+      summary: Statut d'un vol
+      security: []
+      parameters:
+        - { in: query, name: carrierCode, required: true, schema: { type: string } }
+        - { in: query, name: flightNumber, required: true, schema: { type: string } }
+        - { in: query, name: scheduledDepartureDate, required: true, schema: { type: string, format: date } }
+      responses: { '200': { description: OK } }
+
+  /flights/delay-prediction:
+    get:
+      tags: [Flights]
+      summary: Prédiction de retard
+      security: []
+      responses: { '200': { description: OK } }
+
+  /flights/analytics/most-traveled:
+    get:
+      tags: [Flights]
+      summary: Destinations les plus voyagées
+      security: []
+      responses: { '200': { description: OK } }
+
+  # ─── HÔTELS ───────────────────────────────────────────
+  /accommodations/search:
+    get:
+      tags: [Accommodations]
+      summary: Rechercher des hôtels
+      security: []
+      parameters:
+        - { in: query, name: cityCode, required: true, schema: { type: string } }
+        - { in: query, name: checkIn, required: true, schema: { type: string, format: date } }
+        - { in: query, name: checkOut, required: true, schema: { type: string, format: date } }
+        - { in: query, name: adults, schema: { type: integer, default: 1 } }
+        - { in: query, name: rooms, schema: { type: integer, default: 1 } }
+        - { in: query, name: rating, schema: { type: integer, minimum: 1, maximum: 5 } }
+      responses: { '200': { description: OK } }
+
+  /accommodations/{hotelId}:
+    get:
+      tags: [Accommodations]
+      summary: Détails d'un hôtel
+      security: []
+      parameters:
+        - { in: path, name: hotelId, required: true, schema: { type: string } }
+      responses: { '200': { description: OK } }
+
+  /accommodations/recommendations:
+    get:
+      tags: [Accommodations]
+      summary: Hôtels recommandés
+      responses: { '200': { description: OK } }
+
+  # ─── ACTIVITÉS ────────────────────────────────────────
+  /activities/search:
+    get:
+      tags: [Activities]
+      summary: Rechercher des activités
+      security: []
+      parameters:
+        - { in: query, name: latitude, required: true, schema: { type: number } }
+        - { in: query, name: longitude, required: true, schema: { type: number } }
+        - { in: query, name: radius, schema: { type: integer, default: 20 } }
+        - { in: query, name: category, schema: { type: string } }
+      responses: { '200': { description: OK } }
+
+  /activities/{activityId}:
+    get:
+      tags: [Activities]
+      summary: Détails d'une activité
+      security: []
+      parameters:
+        - { in: path, name: activityId, required: true, schema: { type: string } }
+      responses: { '200': { description: OK } }
+
+  /activities/recommendations:
+    get:
+      tags: [Activities]
+      summary: Activités recommandées
+      responses: { '200': { description: OK } }
+
+  # ─── PANIER ───────────────────────────────────────────
+  /cart/{userId}:
+    get:
+      tags: [Cart]
+      summary: Récupérer le panier
+      parameters:
+        - { in: path, name: userId, required: true, schema: { type: string } }
+      responses: { '200': { description: OK } }
+    delete:
+      tags: [Cart]
+      summary: Vider le panier
+      parameters:
+        - { in: path, name: userId, required: true, schema: { type: string } }
+      responses: { '200': { description: Vidé } }
+
+  /cart/items:
+    post:
+      tags: [Cart]
+      summary: Ajouter un article au panier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - { $ref: '#/components/schemas/CartItem' }
+                - type: object
+                  properties:
+                    userId: { type: string }
+      responses: { '201': { description: Ajouté } }
+
+  /cart/{userId}/items/{itemId}:
+    put:
+      tags: [Cart]
+      summary: Modifier la quantité
+      parameters:
+        - { in: path, name: userId, required: true, schema: { type: string } }
+        - { in: path, name: itemId, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                quantity: { type: integer }
+      responses: { '200': { description: Modifié } }
+    delete:
+      tags: [Cart]
+      summary: Retirer un article
+      parameters:
+        - { in: path, name: userId, required: true, schema: { type: string } }
+        - { in: path, name: itemId, required: true, schema: { type: string } }
+      responses: { '200': { description: Retiré } }
+
+  /cart/{userId}/checkout:
+    post:
+      tags: [Cart]
+      summary: Déclencher le paiement (crée un PaymentIntent Stripe)
+      parameters:
+        - { in: path, name: userId, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CheckoutRequest' }
+      responses:
+        '200':
+          description: PaymentIntent créé, panier verrouillé
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - properties: { data: { $ref: '#/components/schemas/BookingResponse' } }
+
+  # ─── RÉSERVATIONS ─────────────────────────────────────
+  /bookings:
+    get:
+      tags: [Bookings]
+      summary: Lister mes réservations
+      responses: { '200': { description: OK } }
+
+  /bookings/{reference}:
+    get:
+      tags: [Bookings]
+      summary: Détails d'une réservation
+      parameters:
+        - { in: path, name: reference, required: true, schema: { type: string } }
+      responses: { '200': { description: OK } }
+    delete:
+      tags: [Bookings]
+      summary: Annuler une réservation
+      parameters:
+        - { in: path, name: reference, required: true, schema: { type: string } }
+      responses: { '200': { description: Annulée } }
+
+  /bookings/{reference}/confirm:
+    post:
+      tags: [Bookings]
+      summary: Confirmer après paiement réussi
+      parameters:
+        - { in: path, name: reference, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                paymentIntentId: { type: string }
+      responses: { '200': { description: Confirmée } }
+
+  /bookings/{reference}/pdf:
+    get:
+      tags: [Bookings]
+      summary: Export PDF
+      parameters:
+        - { in: path, name: reference, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: PDF binaire
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+
+  /bookings/{reference}/ics:
+    get:
+      tags: [Bookings]
+      summary: Export calendrier ICS
+      parameters:
+        - { in: path, name: reference, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Fichier ICS
+          content:
+            text/calendar:
+              schema: { type: string }
+
+  # ─── ITINÉRAIRES ──────────────────────────────────────
+  /itineraries:
+    get:
+      tags: [Itineraries]
+      summary: Lister les itinéraires
+      responses: { '200': { description: OK } }
+    post:
+      tags: [Itineraries]
+      summary: Créer un itinéraire
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                startDate: { type: string, format: date }
+                endDate: { type: string, format: date }
+      responses: { '201': { description: Créé } }
+
+  /itineraries/{id}:
+    get:
+      tags: [Itineraries]
+      summary: Détails
+      parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
+      responses: { '200': { description: OK } }
+    put:
+      tags: [Itineraries]
+      summary: Modifier
+      parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
+      responses: { '200': { description: Modifié } }
+    delete:
+      tags: [Itineraries]
+      summary: Supprimer
+      parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
+      responses: { '200': { description: Supprimé } }
+
+  /itineraries/{id}/items:
+    post:
+      tags: [Itineraries]
+      summary: Ajouter un élément
+      parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
+      responses: { '201': { description: Ajouté } }
+
+  /itineraries/{id}/items/{itemId}:
+    put:
+      tags: [Itineraries]
+      summary: Modifier un élément
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+        - { in: path, name: itemId, required: true, schema: { type: string } }
+      responses: { '200': { description: Modifié } }
+    delete:
+      tags: [Itineraries]
+      summary: Retirer un élément
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+        - { in: path, name: itemId, required: true, schema: { type: string } }
+      responses: { '200': { description: Retiré } }
+
+  # ─── RÉFÉRENCE ────────────────────────────────────────
+  /airports/search:
+    get:
+      tags: [Reference]
+      summary: Autocomplétion aéroports
+      security: []
+      parameters:
+        - { in: query, name: keyword, required: true, schema: { type: string } }
+      responses: { '200': { description: OK } }
+
+  /airports/nearest:
+    get:
+      tags: [Reference]
+      summary: Aéroports les plus proches
+      security: []
+      parameters:
+        - { in: query, name: latitude, required: true, schema: { type: number } }
+        - { in: query, name: longitude, required: true, schema: { type: number } }
+      responses: { '200': { description: OK } }
+
+  /airlines/{code}:
+    get:
+      tags: [Reference]
+      summary: Détails d'une compagnie
+      security: []
+      parameters: [{ in: path, name: code, required: true, schema: { type: string } }]
+      responses: { '200': { description: OK } }
+
+  /locations/search:
+    get:
+      tags: [Reference]
+      summary: Recherche de destinations
+      security: []
+      parameters:
+        - { in: query, name: keyword, required: true, schema: { type: string } }
+      responses: { '200': { description: OK } }

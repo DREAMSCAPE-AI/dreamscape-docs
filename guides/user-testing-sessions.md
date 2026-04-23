@@ -160,6 +160,15 @@
 
 ---
 
+<<<<<<< HEAD
+## 4. Sessions réelles (à venir)
+
+| Session | Participant | Date prévue | Statut |
+|---------|-------------|-------------|--------|
+| Session 6 | P6 (réel) | À planifier | En attente recrutement |
+| Session 7 | P7 (réel) | À planifier | En attente recrutement |
+| Session 8 | P8 (réel) | À planifier | En attente recrutement |
+=======
 ---
 
 ### Session 6 — P6 Lucas F.
@@ -231,3 +240,4 @@
 **Citations clés** :
 - *"J'aime bien l'idée des recommandations personnalisées. Sur téléphone c'est un peu lent parfois."*
 - *"Le bouton pour sauvegarder mon profil n'était pas évident à trouver."*
+>>>>>>> 7a85c2bc4d119eefb990401208c81534c1b546d6
