@@ -1,0 +1,317 @@
+openapi: 3.0.3
+info:
+  title: DreamScape Auth API
+  description: |
+    Authentification et gestion des sessions utilisateur.
+    Service Auth (port 3001) — exposé via le Gateway sur `/api/v1/auth`.
+  version: 1.0.0
+  contact:
+    name: DreamScape Team
+    email: contact@dreamscape.app
+
+servers:
+  - url: http://localhost:3000/api/v1/auth
+    description: Gateway local (dev)
+  - url: http://localhost:3001/api/v1/auth
+    description: Auth Service direct (dev)
+  - url: https://api.dreamscape.app/api/v1/auth
+    description: Production
+
+tags:
+  - name: Authentication
+    description: Login, logout, register
+  - name: Profile
+    description: Profil utilisateur courant
+  - name: Tokens
+    description: Refresh, vérification, révocation
+  - name: System
+    description: Health check
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: refreshToken
+
+  schemas:
+    Envelope:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { type: object }
+        message: { type: string }
+
+    User:
+      type: object
+      properties:
+        id: { type: string, example: "clxxxxx" }
+        email: { type: string, format: email }
+        firstName: { type: string }
+        lastName: { type: string }
+        username: { type: string }
+        role: { type: string, enum: [user, admin] }
+        onboardingCompleted: { type: boolean }
+
+    Tokens:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+    RegisterRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email, example: "jean@example.com" }
+        password:
+          type: string
+          minLength: 8
+          description: Min 8 chars, majuscule, minuscule, chiffre, caractère spécial
+          example: "Password1!"
+        firstName: { type: string, minLength: 1, maxLength: 50 }
+        lastName: { type: string, minLength: 1, maxLength: 50 }
+        username: { type: string, minLength: 3, maxLength: 30 }
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+        rememberMe:
+          type: boolean
+          description: Si true, refresh token de 30 jours
+          default: false
+
+    AuthResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                user: { $ref: '#/components/schemas/User' }
+                tokens: { $ref: '#/components/schemas/Tokens' }
+
+    ChangePasswordRequest:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword: { type: string }
+        newPassword: { type: string, minLength: 8 }
+
+    Error:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        error: { type: string }
+        code: { type: string }
+
+  responses:
+    Unauthorized:
+      description: JWT manquant ou invalide
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    ValidationError:
+      description: Erreur de validation
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    RateLimited:
+      description: Trop de requêtes (100 / 15 min)
+      headers:
+        Retry-After:
+          schema: { type: integer }
+
+security:
+  - bearerAuth: []
+
+paths:
+  /register:
+    post:
+      tags: [Authentication]
+      summary: Inscription d'un nouvel utilisateur
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
+      responses:
+        '201':
+          description: Compte créé. Cookie `refreshToken` posé (httpOnly, 7j)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '409':
+          description: Email déjà utilisé
+
+  /login:
+    post:
+      tags: [Authentication]
+      summary: Connexion
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: Connexion réussie. Cookie `refreshToken` posé
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401':
+          description: Identifiants incorrects
+
+  /profile:
+    get:
+      tags: [Profile]
+      summary: Récupérer le profil courant
+      responses:
+        '200':
+          description: Profil utilisateur
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    put:
+      tags: [Profile]
+      summary: Mettre à jour le profil
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                firstName: { type: string }
+                lastName: { type: string }
+                username: { type: string }
+      responses:
+        '200':
+          description: Profil mis à jour
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Envelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /change-password:
+    post:
+      tags: [Profile]
+      summary: Changer le mot de passe
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChangePasswordRequest' }
+      responses:
+        '200':
+          description: Mot de passe modifié
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401':
+          description: Mot de passe actuel incorrect
+
+  /refresh:
+    post:
+      tags: [Tokens]
+      summary: Renouveler l'access token
+      security:
+        - cookieAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken:
+                  type: string
+                  description: Optionnel si cookie présent
+      responses:
+        '200':
+          description: Nouveau access token
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          tokens: { $ref: '#/components/schemas/Tokens' }
+        '401':
+          description: Refresh token invalide ou expiré
+
+  /verify-token:
+    post:
+      tags: [Tokens]
+      summary: Vérifier la validité d'un access token
+      responses:
+        '200':
+          description: Token valide
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          user: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /logout:
+    post:
+      tags: [Tokens]
+      summary: Déconnexion (révoque le refresh token courant)
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Déconnecté
+
+  /logout-all:
+    post:
+      tags: [Tokens]
+      summary: Déconnexion de tous les appareils
+      responses:
+        '200':
+          description: Tous les refresh tokens révoqués
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /health:
+    get:
+      tags: [System]
+      summary: Health check
+      security: []
+      responses:
+        '200':
+          description: Service en bonne santé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: healthy }
+                  uptime: { type: number }
+                  database: { type: string, example: connected }
+                  cache: { type: string, example: connected }

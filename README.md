@@ -12,6 +12,7 @@ Documentation complète de la plateforme DreamScape, une OTA (Online Travel Agen
 | [API Reference](#api-reference) | Endpoints, requêtes, réponses |
 | [Frontend](#frontend) | Application React, pages, stores |
 | [Infrastructure](#infrastructure) | Docker, Kubernetes, CI/CD, monitoring |
+| [Contribution](#contribution) | Standards de développement, workflow Git, procédures CI/CD |
 | [Guides](#guides) | Tests, notifications, i18n, flux métier |
 | [Sécurité & RGPD](#sécurité--rgpd) | Analyses sécurité, conformité RGPD |
 
@@ -70,6 +71,7 @@ Documentation détaillée de tous les endpoints (méthode, path, auth, body, ré
 | [Payment API](api-reference/payment-api.md) | Paiements Stripe, webhooks |
 | [AI API](api-reference/ai-api.md) | Recommandations, cold start, prédictions |
 | [Gateway API](api-reference/gateway-api.md) | Routes proxy, sessions VR |
+| **[OpenAPI / Swagger](api-reference/openapi/README.md)** | **Specs OpenAPI 3.0 complètes (YAML) — Swagger UI, Redoc, génération de clients** |
 
 ---
 
@@ -113,6 +115,17 @@ Documentation détaillée de tous les endpoints (méthode, path, auth, body, ré
 
 ---
 
+## Contribution
+
+| Document | Contenu |
+|----------|---------|
+| [Vue d'ensemble](contributing/README.md) | Index des documents de contribution |
+| [Standards de développement](contributing/development-standards.md) | Conventions TypeScript, nommage, linting, tests, sécurité, Prisma |
+| [Workflow de contribution](contributing/contribution-workflow.md) | Stratégie de branches, Conventional Commits, pull requests, code review |
+| [Procédures CI/CD](contributing/ci-cd-procedures.md) | Pipeline 2 stages, déclenchement, promotion staging → prod, rollback |
+
+---
+
 ## Guides
 
 | Document | Contenu |
@@ -122,6 +135,7 @@ Documentation détaillée de tous les endpoints (méthode, path, auth, body, ré
 | [Flux panier & réservation](guides/cart-and-booking-flow.md) | Parcours d'achat end-to-end |
 | [Cache Redis](guides/redis-cache.md) | Stratégie de cache, TTL, patterns |
 | [Internationalisation](guides/i18n.md) | i18next, EN/FR, workflow de traduction |
+| **[Guides par module](guides/modules/README.md)** | **Setup, dev, debug par microservice (auth, user, voyage, payment, ai, panorama)** |
 
 ---
 

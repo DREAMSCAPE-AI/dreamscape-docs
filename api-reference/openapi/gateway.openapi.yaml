@@ -1,0 +1,181 @@
+openapi: 3.0.3
+info:
+  title: DreamScape API Gateway
+  description: |
+    Point d'entrée unifié vers tous les microservices DreamScape.
+    Routes proxy + sessions VR locales (DR-574).
+
+    Sécurité globale : Helmet, CORS, rate limiting (100 req / 15 min / IP).
+    WebSocket Socket.IO proxié vers le User Service.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3000
+    description: Local (dev)
+  - url: https://api.dreamscape.app
+    description: Production
+
+tags:
+  - { name: System,  description: Health, docs, root }
+  - { name: VR,      description: Sessions VR avec PIN (DR-574) }
+  - { name: Proxy,   description: Routes proxy vers les microservices }
+
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  schemas:
+    VrSessionRequest:
+      type: object
+      required: [destination, userId]
+      properties:
+        destination: { type: string, example: paris }
+        userId: { type: string }
+
+    VrSessionResponse:
+      type: object
+      properties:
+        pin: { type: string, pattern: "^[0-9]{4}$", example: "4823" }
+        sessionId: { type: string }
+        destination: { type: string }
+        expiresAt: { type: string, format: date-time }
+        redirectUrl: { type: string, format: uri }
+
+    HealthResponse:
+      type: object
+      properties:
+        status: { type: string, example: healthy }
+        gateway: { type: string, example: running }
+        timestamp: { type: string, format: date-time }
+
+paths:
+  /:
+    get:
+      tags: [System]
+      summary: Racine du Gateway
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string, example: "DreamScape API Gateway" }
+                  version: { type: string }
+                  status: { type: string }
+
+  /health:
+    get:
+      tags: [System]
+      summary: Health check du Gateway
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HealthResponse' }
+
+  /docs:
+    get:
+      tags: [System]
+      summary: Description des routes proxiées
+      responses:
+        '200': { description: OK }
+
+  /api/v1/vr/sessions:
+    post:
+      tags: [VR]
+      summary: Créer une session VR avec PIN à 4 chiffres
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VrSessionRequest' }
+      responses:
+        '200':
+          description: Session créée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VrSessionResponse' }
+
+  /api/v1/vr/sessions/{pin}:
+    get:
+      tags: [VR]
+      summary: Valider un PIN VR
+      parameters:
+        - { in: path, name: pin, required: true, schema: { type: string, pattern: "^[0-9]{4}$" } }
+      responses:
+        '200':
+          description: PIN valide
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid: { type: boolean }
+                  sessionId: { type: string }
+                  destination: { type: string }
+                  expiresAt: { type: string, format: date-time }
+        '404':
+          description: PIN invalide ou expiré
+    delete:
+      tags: [VR]
+      summary: Invalider une session VR
+      parameters:
+        - { in: path, name: pin, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Invalidée }
+
+  # ─── Routes proxy (référence) ────────────────────────
+  /api/v1/auth/{proxy+}:
+    parameters:
+      - { in: path, name: proxy+, required: true, schema: { type: string } }
+    get:
+      tags: [Proxy]
+      summary: Proxy → Auth Service (3001)
+      description: Voir [auth.openapi.yaml](auth.openapi.yaml)
+      responses: { '200': { description: Voir spec auth } }
+
+  /api/v1/users/{proxy+}:
+    parameters:
+      - { in: path, name: proxy+, required: true, schema: { type: string } }
+    get:
+      tags: [Proxy]
+      summary: Proxy → User Service (3002)
+      description: Voir [user.openapi.yaml](user.openapi.yaml)
+      responses: { '200': { description: Voir spec user } }
+
+  /api/v1/admin/{proxy+}:
+    parameters:
+      - { in: path, name: proxy+, required: true, schema: { type: string } }
+    get:
+      tags: [Proxy]
+      summary: Proxy → User Service admin (3002)
+      responses: { '200': { description: Voir spec user } }
+
+  /api/v1/voyage/{proxy+}:
+    parameters:
+      - { in: path, name: proxy+, required: true, schema: { type: string } }
+    get:
+      tags: [Proxy]
+      summary: Proxy → Voyage Service (3003)
+      description: Voir [voyage.openapi.yaml](voyage.openapi.yaml)
+      responses: { '200': { description: Voir spec voyage } }
+
+  /api/v1/payment/{proxy+}:
+    parameters:
+      - { in: path, name: proxy+, required: true, schema: { type: string } }
+    get:
+      tags: [Proxy]
+      summary: Proxy → Payment Service (3004)
+      description: Voir [payment.openapi.yaml](payment.openapi.yaml)
+      responses: { '200': { description: Voir spec payment } }
+
+  /api/v1/ai/{proxy+}:
+    parameters:
+      - { in: path, name: proxy+, required: true, schema: { type: string } }
+    get:
+      tags: [Proxy]
+      summary: Proxy → AI Service (3005)
+      description: Voir [ai.openapi.yaml](ai.openapi.yaml)
+      responses: { '200': { description: Voir spec ai } }

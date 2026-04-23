@@ -1,0 +1,230 @@
+openapi: 3.0.3
+info:
+  title: DreamScape Payment API
+  description: |
+    Paiements Stripe (PaymentIntent, webhooks, remboursements).
+    Service Payment (port 3004) — exposé via le Gateway sur `/api/v1/payment`.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3000/api/v1/payment
+    description: Gateway local (dev)
+  - url: https://api.dreamscape.app/api/v1/payment
+    description: Production
+
+tags:
+  - { name: Payments, description: PaymentIntent et statuts }
+  - { name: Webhooks, description: Webhooks Stripe }
+  - { name: Refunds,  description: Remboursements }
+  - { name: History,  description: Historique des paiements }
+  - { name: System,   description: Health check }
+
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+    stripeSignature:
+      type: apiKey
+      in: header
+      name: stripe-signature
+
+  schemas:
+    Envelope:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { type: object }
+
+    PaymentIntentRequest:
+      type: object
+      required: [amount, currency, bookingReference]
+      properties:
+        amount:
+          type: integer
+          description: Montant en centimes (29950 = 299,50€)
+          example: 29950
+        currency:
+          type: string
+          description: Code devise ISO 4217
+          example: eur
+        bookingReference:
+          type: string
+          example: "DS-A7B3X2K1"
+        metadata: { type: object, additionalProperties: { type: string } }
+
+    PaymentIntentResponse:
+      type: object
+      properties:
+        clientSecret: { type: string, example: "pi_3Ox...8j_secret_..." }
+        paymentIntentId: { type: string, example: "pi_3Ox...8j" }
+        amount: { type: integer }
+        currency: { type: string }
+        status:
+          type: string
+          enum: [requires_payment_method, requires_confirmation, processing, succeeded, canceled]
+
+    Transaction:
+      type: object
+      properties:
+        paymentIntentId: { type: string }
+        amount: { type: integer }
+        currency: { type: string }
+        status: { type: string }
+        bookingReference: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    RefundRequest:
+      type: object
+      required: [paymentIntentId]
+      properties:
+        paymentIntentId: { type: string }
+        amount:
+          type: integer
+          description: Montant partiel en centimes (optionnel)
+        reason:
+          type: string
+          enum: [duplicate, fraudulent, customer_request]
+
+security:
+  - bearerAuth: []
+
+paths:
+  /intent:
+    post:
+      tags: [Payments]
+      summary: Créer un PaymentIntent Stripe
+      description: |
+        Appelé par le Voyage Service lors du checkout du panier.
+        Le client utilise ensuite `clientSecret` pour confirmer le paiement côté front.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PaymentIntentRequest' }
+      responses:
+        '200':
+          description: PaymentIntent créé
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - properties: { data: { $ref: '#/components/schemas/PaymentIntentResponse' } }
+        '400': { description: Validation }
+        '401': { description: Non authentifié }
+
+  /{paymentIntentId}:
+    get:
+      tags: [Payments]
+      summary: Statut d'un paiement
+      parameters:
+        - { in: path, name: paymentIntentId, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Statut Stripe
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          id: { type: string }
+                          status: { type: string }
+                          amount: { type: integer }
+                          currency: { type: string }
+                          bookingReference: { type: string }
+                          createdAt: { type: string, format: date-time }
+        '404': { description: Introuvable }
+
+  /webhook:
+    post:
+      tags: [Webhooks]
+      summary: Webhook Stripe
+      description: |
+        Endpoint utilisant le body brut (`express.raw()`).
+        Vérifie la signature Stripe et publie sur Kafka :
+        - `payment_intent.succeeded` → `dreamscape.payment.completed`
+        - `payment_intent.payment_failed` → `dreamscape.payment.failed`
+        - `payment_intent.canceled` → `dreamscape.payment.cancelled`
+        - `charge.dispute.created` → log
+
+        En dev : `stripe listen --forward-to http://localhost:3004/api/v1/payment/webhook`
+      security:
+        - stripeSignature: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200':
+          description: Reçu
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received: { type: boolean, example: true }
+        '400': { description: Signature invalide }
+
+  /refund:
+    post:
+      tags: [Refunds]
+      summary: Initier un remboursement
+      description: Réservé aux admins ou au propriétaire de la réservation.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RefundRequest' }
+      responses:
+        '200': { description: Remboursement créé }
+        '403': { description: Permissions insuffisantes }
+
+  /history:
+    get:
+      tags: [History]
+      summary: Historique des paiements
+      parameters:
+        - { in: query, name: limit, schema: { type: integer, default: 20 } }
+        - { in: query, name: offset, schema: { type: integer, default: 0 } }
+        - { in: query, name: status, schema: { type: string } }
+        - { in: query, name: from, schema: { type: string, format: date } }
+        - { in: query, name: to, schema: { type: string, format: date } }
+      responses:
+        '200':
+          description: Liste des transactions
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          transactions:
+                            type: array
+                            items: { $ref: '#/components/schemas/Transaction' }
+                          total: { type: integer }
+
+  /health:
+    get:
+      tags: [System]
+      summary: Health check
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: healthy }
+                  uptime: { type: number }
+                  database: { type: string }
+                  cache: { type: string }
+                  stripe: { type: string }

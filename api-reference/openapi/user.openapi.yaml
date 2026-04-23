@@ -1,0 +1,362 @@
+openapi: 3.0.3
+info:
+  title: DreamScape User API
+  description: |
+    Gestion du profil utilisateur, onboarding, favoris, historique, notifications, RGPD et administration.
+    Service User (port 3002) — exposé via le Gateway sur `/api/v1/users` et `/api/v1/admin`.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Gateway local (dev)
+  - url: https://api.dreamscape.app/api/v1
+    description: Production
+
+tags:
+  - { name: Profile,        description: Profil utilisateur }
+  - { name: Onboarding,     description: Questionnaire de préférences }
+  - { name: Favorites,      description: Favoris (destinations, vols, hôtels) }
+  - { name: History,        description: Historique d'activité }
+  - { name: Notifications,  description: Notifications utilisateur }
+  - { name: NotificationPreferences, description: Préférences de notification }
+  - { name: GDPR,           description: Consentement et droits RGPD }
+  - { name: Admin,          description: Administration (rôle admin requis) }
+
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  schemas:
+    Envelope:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { type: object }
+
+    UserProfile:
+      type: object
+      properties:
+        id: { type: string }
+        firstName: { type: string }
+        lastName: { type: string }
+        avatar: { type: string, format: uri }
+        bio: { type: string }
+        phoneNumber: { type: string }
+        dateOfBirth: { type: string, format: date }
+
+    OnboardingStep:
+      type: object
+      required: [step, data]
+      properties:
+        step:
+          type: string
+          enum: [travel_style, destinations, budget, accommodation, activities, constraints]
+        data: { type: object }
+
+    Favorite:
+      type: object
+      required: [itemType, itemId]
+      properties:
+        itemType: { type: string, enum: [destination, flight, hotel, activity] }
+        itemId: { type: string }
+
+    NotificationPreference:
+      type: object
+      properties:
+        booking_confirmation: { $ref: '#/components/schemas/Channels' }
+        price_alert: { $ref: '#/components/schemas/Channels' }
+        trip_reminder: { $ref: '#/components/schemas/Channels' }
+        promotions: { $ref: '#/components/schemas/Channels' }
+
+    Channels:
+      type: object
+      properties:
+        email: { type: boolean }
+        push: { type: boolean }
+        sms: { type: boolean }
+
+    GdprConsent:
+      type: object
+      properties:
+        analytics: { type: boolean }
+        marketing: { type: boolean }
+        functional: { type: boolean }
+        preferences: { type: boolean }
+
+    GdprRequest:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [DATA_EXPORT, DATA_DELETION, DATA_RECTIFICATION, RESTRICTION, PORTABILITY]
+        reason: { type: string }
+
+    SuspendRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string }
+        duration: { type: string, example: "7d" }
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ─── PROFIL ────────────────────────────────────────────
+  /users/profile:
+    get:
+      tags: [Profile]
+      summary: Récupérer le profil
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - properties: { data: { $ref: '#/components/schemas/UserProfile' } }
+    put:
+      tags: [Profile]
+      summary: Mettre à jour le profil
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UserProfile' }
+      responses:
+        '200': { description: Mis à jour }
+    delete:
+      tags: [Profile]
+      summary: Supprimer le compte (RGPD)
+      responses:
+        '200': { description: Compte supprimé }
+
+  # ─── ONBOARDING ────────────────────────────────────────
+  /users/onboarding/init:
+    post:
+      tags: [Onboarding]
+      summary: Initialiser l'onboarding
+      responses: { '200': { description: OK } }
+
+  /users/onboarding/progress:
+    post:
+      tags: [Onboarding]
+      summary: Sauvegarder une étape
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OnboardingStep' }
+      responses: { '200': { description: OK } }
+    get:
+      tags: [Onboarding]
+      summary: Obtenir la progression
+      responses: { '200': { description: OK } }
+
+  /users/onboarding/complete:
+    post:
+      tags: [Onboarding]
+      summary: Finaliser l'onboarding
+      responses: { '200': { description: Onboarding complété } }
+
+  # ─── FAVORIS ───────────────────────────────────────────
+  /users/favorites:
+    get:
+      tags: [Favorites]
+      summary: Lister les favoris
+      parameters:
+        - in: query
+          name: type
+          schema: { type: string, enum: [destination, flight, hotel, activity] }
+      responses: { '200': { description: OK } }
+    post:
+      tags: [Favorites]
+      summary: Ajouter un favori
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Favorite' }
+      responses: { '201': { description: Créé } }
+
+  /users/favorites/{id}:
+    delete:
+      tags: [Favorites]
+      summary: Supprimer un favori
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+      responses: { '200': { description: Supprimé } }
+
+  /users/favorites/batch:
+    post:
+      tags: [Favorites]
+      summary: Ajout en masse
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items: { $ref: '#/components/schemas/Favorite' }
+      responses: { '201': { description: Créés } }
+    delete:
+      tags: [Favorites]
+      summary: Suppression en masse
+      responses: { '200': { description: Supprimés } }
+
+  # ─── HISTORIQUE ────────────────────────────────────────
+  /users/history:
+    get:
+      tags: [History]
+      summary: Historique de recherches
+      parameters:
+        - { in: query, name: type, schema: { type: string } }
+        - { in: query, name: limit, schema: { type: integer, default: 20 } }
+        - { in: query, name: offset, schema: { type: integer, default: 0 } }
+        - { in: query, name: from, schema: { type: string, format: date } }
+        - { in: query, name: to, schema: { type: string, format: date } }
+      responses: { '200': { description: OK } }
+    delete:
+      tags: [History]
+      summary: Effacer l'historique
+      responses: { '200': { description: Effacé } }
+
+  # ─── NOTIFICATIONS ─────────────────────────────────────
+  /users/notifications:
+    get:
+      tags: [Notifications]
+      summary: Lister les notifications
+      parameters:
+        - { in: query, name: status, schema: { type: string, enum: [unread, read, all] } }
+        - { in: query, name: type, schema: { type: string } }
+        - { in: query, name: limit, schema: { type: integer, default: 20 } }
+        - { in: query, name: offset, schema: { type: integer, default: 0 } }
+      responses: { '200': { description: OK } }
+    delete:
+      tags: [Notifications]
+      summary: Supprimer les notifications lues
+      responses: { '200': { description: Supprimées } }
+
+  /users/notifications/{id}/read:
+    patch:
+      tags: [Notifications]
+      summary: Marquer comme lue
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+      responses: { '200': { description: OK } }
+
+  /users/notification-preferences:
+    get:
+      tags: [NotificationPreferences]
+      summary: Lire les préférences
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - properties: { data: { $ref: '#/components/schemas/NotificationPreference' } }
+    put:
+      tags: [NotificationPreferences]
+      summary: Mettre à jour
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NotificationPreference' }
+      responses: { '200': { description: Mises à jour } }
+
+  # ─── RGPD ──────────────────────────────────────────────
+  /users/gdpr/consent:
+    get:
+      tags: [GDPR]
+      summary: Lire les consentements
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - properties: { data: { $ref: '#/components/schemas/GdprConsent' } }
+    post:
+      tags: [GDPR]
+      summary: Mettre à jour les consentements
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GdprConsent' }
+      responses: { '200': { description: OK } }
+
+  /users/gdpr/request:
+    post:
+      tags: [GDPR]
+      summary: Soumettre une demande RGPD
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GdprRequest' }
+      responses: { '201': { description: Demande créée } }
+
+  /users/gdpr/requests:
+    get:
+      tags: [GDPR]
+      summary: Lister mes demandes RGPD
+      responses: { '200': { description: OK } }
+
+  /users/gdpr/privacy-policy:
+    get:
+      tags: [GDPR]
+      summary: Politique de confidentialité en vigueur
+      security: []
+      responses: { '200': { description: OK } }
+
+  /users/gdpr/privacy-policy/accept:
+    post:
+      tags: [GDPR]
+      summary: Accepter la politique de confidentialité
+      responses: { '200': { description: Acceptée } }
+
+  # ─── ADMIN ─────────────────────────────────────────────
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: Liste paginée des utilisateurs
+      parameters:
+        - { in: query, name: limit, schema: { type: integer, default: 50 } }
+        - { in: query, name: offset, schema: { type: integer, default: 0 } }
+        - { in: query, name: search, schema: { type: string } }
+      responses: { '200': { description: OK } }
+
+  /admin/users/{id}:
+    get:
+      tags: [Admin]
+      summary: Détails d'un utilisateur
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+      responses: { '200': { description: OK } }
+
+  /admin/users/{id}/suspend:
+    post:
+      tags: [Admin]
+      summary: Suspendre un compte
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SuspendRequest' }
+      responses: { '200': { description: Suspendu } }
+
+  /admin/users/{id}/unsuspend:
+    post:
+      tags: [Admin]
+      summary: Réactiver un compte
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+      responses: { '200': { description: Réactivé } }

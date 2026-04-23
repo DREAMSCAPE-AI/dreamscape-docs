@@ -15,11 +15,19 @@
 | P3 | Marie-Claire D. | C | Fictif | Complété | Session 3 |
 | P4 | Thomas B. | A | Fictif | Complété | Session 4 |
 | P5 | Aïcha K. | B | Fictif | Complété | Session 5 |
+<<<<<<< HEAD
+| P6 | — | — | Réel | À recruter | — |
+| P7 | — | — | Réel | À recruter | — |
+| P8 | — | — | Réel | À recruter | — |
+
+**Total fictifs** : 5 / **Total réels prévus** : 3
+=======
 | P6 | Lucas F. | C | Fictif | Complété | Session 6 |
 | P7 | Nathalie V. | B | Fictif | Complété | Session 7 |
 | P8 | Karim D. | A | Fictif | Complété | Session 8 |
 
 **Total participants** : 8
+>>>>>>> 7a85c2bc4d119eefb990401208c81534c1b546d6
 
 ---
 
@@ -90,6 +98,39 @@
 
 ---
 
+<<<<<<< HEAD
+## Participants réels (à recruter)
+
+### P6 — À définir
+- **Groupe cible** : A ou C
+- **Critères** : Pas de profil tech, utilise occasionnellement des sites de voyage
+- **Statut** : Recrutement en cours (DR-226)
+
+### P7 — À définir
+- **Groupe cible** : B
+- **Critères** : Voyageur fréquent, profil pro ou loisirs exigeant
+- **Statut** : Recrutement en cours (DR-226)
+
+### P8 — À définir
+- **Groupe cible** : Libre
+- **Critères** : Diversité de profil par rapport à P6/P7
+- **Statut** : Recrutement en cours (DR-226)
+
+---
+
+## Résultats fictifs — Synthèse SUS
+
+| Participant | Score SUS | Appréciation |
+|-------------|-----------|--------------|
+| P1 — Sophie M. | 72 | Acceptable |
+| P2 — Julien R. | 65 | Limite |
+| P3 — Marie-Claire D. | 52 | Problématique |
+| P4 — Thomas B. | 78 | Bonne |
+| P5 — Aïcha K. | 74 | Acceptable |
+| **Moyenne fictive** | **68.2** | **Seuil acceptable** |
+
+> Les 3 sessions réelles viendront consolider ou corriger cette moyenne.
+=======
 ## Participants réels
 
 ### P6 — Lucas F.
@@ -144,3 +185,4 @@
 | P7 — Nathalie V. | B | 71 | Acceptable |
 | P8 — Karim D. | A | 67 | Limite |
 | **Moyenne globale** | — | **68.5** | **Seuil acceptable** |
+>>>>>>> 7a85c2bc4d119eefb990401208c81534c1b546d6
